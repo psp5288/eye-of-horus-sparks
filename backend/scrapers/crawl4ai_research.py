@@ -2,7 +2,7 @@
 Crawl4AI research scraper for Eye of Horus: Sparks backtest data.
 
 Scrapes Wikipedia pages and public search-result pages for three events:
-  - Astroworld Festival (2021 and general history)
+  - Astroworld Festival 2024
   - Coachella 2023
   - Super Bowl LVIII (2024)
 
@@ -32,9 +32,9 @@ OUTPUT_FILE = REPO_ROOT / "data" / "research_scraped.json"
 # ── URL manifest ───────────────────────────────────────────────────────────
 EVENTS = [
     {
-        "event_id": "astroworld_2021",
-        "event_name": "Astroworld Festival 2021",
-        "date": "2021-11-05",
+        "event_id": "astroworld_2024",
+        "event_name": "Astroworld Festival 2024",
+        "date": "2024-11-08",
         "urls": [
             {
                 "url": "https://en.wikipedia.org/wiki/Astroworld_Festival",
@@ -42,19 +42,19 @@ EVENTS = [
                 "label": "Wikipedia — Astroworld Festival",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/2021_Astroworld_Festival_crowd_crush",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — 2021 crowd crush incident",
+                "url": "https://www.google.com/search?q=astroworld+2024+attendance+numbers",
+                "source_type": "search",
+                "label": "Search — Astroworld 2024 attendance numbers",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Travis_Scott",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Travis Scott (artist context)",
+                "url": "https://www.google.com/search?q=astroworld+2024+crowd+incident+south+stage",
+                "source_type": "search",
+                "label": "Search — Astroworld 2024 crowd incident south stage",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/NRG_Park",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — NRG Park (venue)",
+                "url": "https://www.google.com/search?q=astroworld+2024+weather+conditions",
+                "source_type": "search",
+                "label": "Search — Astroworld 2024 weather conditions",
             },
         ],
     },
@@ -69,24 +69,24 @@ EVENTS = [
                 "label": "Wikipedia — Coachella (overview)",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/2023_Coachella_Valley_Music_and_Arts_Festival",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Coachella 2023 edition",
+                "url": "https://www.google.com/search?q=coachella+2023+attendance",
+                "source_type": "search",
+                "label": "Search — Coachella 2023 attendance",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Empire_Polo_Club",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Empire Polo Club (venue)",
+                "url": "https://www.google.com/search?q=coachella+2023+crowd+management",
+                "source_type": "search",
+                "label": "Search — Coachella 2023 crowd management",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Bad_Bunny",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Bad Bunny (headliner context)",
+                "url": "https://www.google.com/search?q=coachella+2023+main+stage+capacity",
+                "source_type": "search",
+                "label": "Search — Coachella 2023 main stage capacity",
             },
         ],
     },
     {
-        "event_id": "superbowl_lviii",
+        "event_id": "super_bowl_58",
         "event_name": "Super Bowl LVIII",
         "date": "2024-02-11",
         "urls": [
@@ -96,19 +96,19 @@ EVENTS = [
                 "label": "Wikipedia — Super Bowl LVIII",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Allegiant_Stadium",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Allegiant Stadium (venue)",
+                "url": "https://www.google.com/search?q=super+bowl+58+attendance+entry+times",
+                "source_type": "search",
+                "label": "Search — Super Bowl 58 attendance entry times",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Super_Bowl",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Super Bowl (overview + attendance history)",
+                "url": "https://www.google.com/search?q=super+bowl+lviii+allegiant+stadium",
+                "source_type": "search",
+                "label": "Search — Super Bowl LVIII Allegiant Stadium",
             },
             {
-                "url": "https://en.wikipedia.org/wiki/Kansas_City_Chiefs",
-                "source_type": "wikipedia",
-                "label": "Wikipedia — Kansas City Chiefs (participant context)",
+                "url": "https://www.google.com/search?q=super+bowl+2024+crowd+management",
+                "source_type": "search",
+                "label": "Search — Super Bowl 2024 crowd management",
             },
         ],
     },
@@ -142,7 +142,7 @@ async def scrape_url(
         full_content, scraped_at, status, error (if any).
     """
     scraped_at = datetime.now(timezone.utc).isoformat()
-    print(f"  Scraping: {label[:60]}")
+    print(f"  Scraping: {label[:65]}")
 
     try:
         if NEW_API:
@@ -237,7 +237,7 @@ async def run_scraper() -> dict:
                     total_error += 1
 
                 # Polite delay between requests
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(1.5)
 
             events_output.append(
                 {
