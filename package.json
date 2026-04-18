@@ -1,0 +1,29 @@
+{
+  "name": "eye-of-horus-sparks",
+  "version": "1.0.0",
+  "description": "AI-powered crowd intelligence for live events",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx serve frontend -p 3000",
+    "build": "echo 'Static frontend - no build step needed'",
+    "test": "echo 'Run backend tests: cd backend && pytest'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1",
+    "vercel": "^32.7.2"
+  },
+  "keywords": [
+    "crowd-safety",
+    "ai",
+    "simulation",
+    "events",
+    "hackathon"
+  ],
+  "author": "Eye of Horus Team",
+  "license": "MIT"
+}

@@ -1,0 +1,37 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+mangum==0.17.0  # AWS Lambda / Vercel adapter for FastAPI
+
+# AI
+anthropic==0.40.0
+
+# Data & Simulation
+numpy==1.26.2
+scipy==1.11.4
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# HTTP / APIs
+httpx==0.25.2
+aiohttp==3.9.1
+requests==2.31.0
+
+# Sentiment Analysis (local, no API needed)
+vaderSentiment==3.3.2
+
+# Environment
+python-dotenv==1.0.0
+
+# Caching
+cachetools==5.3.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2  # for TestClient
+
+# Utilities
+python-dateutil==2.8.2
+ujson==5.9.0

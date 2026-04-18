@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "archetypes": [
+    {
+      "id": "casual",
+      "name": "Casual Attendee",
+      "description": "Average concertgoer attending for enjoyment. Follows instructions when clearly communicated.",
+      "base_speed": 1.2,
+      "panic_threshold": 0.65,
+      "compliance": 0.85,
+      "social_influence": 0.20,
+      "group_size": 2,
+      "color": "#4a90d9",
+      "typical_behaviors": [
+        "stays_near_friends",
+        "checks_phone_frequently",
+        "moves_toward_exits_when_instructed",
+        "may_freeze_briefly_under_panic"
+      ]
+    },
+    {
+      "id": "friends_group",
+      "name": "Friends Group",
+      "description": "Group of 3-8 people who stay together. Slows evacuation due to group cohesion. High social influence.",
+      "base_speed": 1.0,
+      "panic_threshold": 0.55,
+      "compliance": 0.75,
+      "social_influence": 0.45,
+      "group_size": 5,
+      "color": "#7ed321",
+      "typical_behaviors": [
+        "moves_as_unit",
+        "waits_for_separated_members",
+        "amplifies_panic_within_group",
+        "resists_splitting_up"
+      ]
+    },
+    {
+      "id": "influencer",
+      "name": "Influencer / Content Creator",
+      "description": "High social media engagement. Can either calm or amplify crowd behavior. Moves independently.",
+      "base_speed": 1.4,
+      "panic_threshold": 0.70,
+      "compliance": 0.65,
+      "social_influence": 0.80,
+      "group_size": 1,
+      "color": "#f5a623",
+      "typical_behaviors": [
+        "documents_incidents",
+        "broadcasts_to_followers",
+        "moves_toward_incident_for_content",
+        "high_impact_on_crowd_mood"
+      ]
+    },
+    {
+      "id": "staff",
+      "name": "Event Staff / Security",
+      "description": "Trained personnel. Full compliance, calms nearby crowd members, directs evacuation.",
+      "base_speed": 1.8,
+      "panic_threshold": 0.95,
+      "compliance": 1.0,
+      "social_influence": 0.60,
+      "group_size": 1,
+      "color": "#ffffff",
+      "typical_behaviors": [
+        "directs_crowd_flow",
+        "maintains_exits",
+        "reduces_panic_in_radius",
+        "coordinates_with_other_staff"
+      ]
+    },
+    {
+      "id": "non_compliant",
+      "name": "Non-Compliant / Agitated",
+      "description": "Does not follow instructions, may push or surge. Disproportionate negative impact on evacuation.",
+      "base_speed": 1.5,
+      "panic_threshold": 0.45,
+      "compliance": 0.15,
+      "social_influence": 0.35,
+      "group_size": 3,
+      "color": "#d0021b",
+      "typical_behaviors": [
+        "ignores_staff_direction",
+        "surges_against_crowd_flow",
+        "triggers_panic_in_neighbors",
+        "may_cause_crowd_crush"
+      ]
+    }
+  ],
+  "default_crowd_profile": {
+    "casual": 0.40,
+    "friends_group": 0.30,
+    "influencer": 0.10,
+    "staff": 0.15,
+    "non_compliant": 0.05
+  },
+  "event_type_profiles": {
+    "concert_ga": {
+      "casual": 0.35,
+      "friends_group": 0.35,
+      "influencer": 0.12,
+      "staff": 0.12,
+      "non_compliant": 0.06
+    },
+    "festival": {
+      "casual": 0.40,
+      "friends_group": 0.28,
+      "influencer": 0.15,
+      "staff": 0.12,
+      "non_compliant": 0.05
+    },
+    "stadium_sports": {
+      "casual": 0.45,
+      "friends_group": 0.28,
+      "influencer": 0.05,
+      "staff": 0.18,
+      "non_compliant": 0.04
+    }
+  }
+}

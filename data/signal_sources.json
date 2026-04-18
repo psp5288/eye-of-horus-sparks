@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "sources": [
+    {
+      "id": "twitter_v2",
+      "name": "Twitter / X API v2",
+      "type": "social_media",
+      "weight": 0.35,
+      "update_interval_seconds": 30,
+      "free_tier": true,
+      "rate_limit": "500k tweets/month on Basic ($100/mo) or 10k/month free",
+      "env_var": "TWITTER_BEARER_TOKEN",
+      "endpoint": "https://api.twitter.com/2/tweets/search/recent",
+      "data_fields": ["text", "created_at", "public_metrics"],
+      "processing": "VADER sentiment → risk score (0=positive, 1=negative)",
+      "fallback": "simulate"
+    },
+    {
+      "id": "openweathermap",
+      "name": "OpenWeatherMap Current Weather",
+      "type": "environmental",
+      "weight": 0.25,
+      "update_interval_seconds": 300,
+      "free_tier": true,
+      "rate_limit": "1000 calls/day free",
+      "env_var": "OPENWEATHER_API_KEY",
+      "endpoint": "https://api.openweathermap.org/data/2.5/weather",
+      "data_fields": ["main.temp", "wind.speed", "weather.description"],
+      "processing": "Rule-based: heat + wind + storm conditions → risk score",
+      "fallback": "simulate"
+    },
+    {
+      "id": "ticketmaster",
+      "name": "Ticketmaster API",
+      "type": "ticketing",
+      "weight": 0.25,
+      "update_interval_seconds": 60,
+      "free_tier": true,
+      "rate_limit": "5000 calls/day free",
+      "env_var": "TICKETMASTER_KEY",
+      "endpoint": "https://app.ticketmaster.com/discovery/v2/events",
+      "data_fields": ["dates", "priceRanges", "seatmap"],
+      "processing": "Attendance estimate from sales data → density score",
+      "fallback": "simulate"
+    },
+    {
+      "id": "ticket_velocity",
+      "name": "Ticket Resale Velocity",
+      "type": "secondary_market",
+      "weight": 0.15,
+      "update_interval_seconds": 120,
+      "free_tier": false,
+      "rate_limit": "Varies by provider",
+      "env_var": "STUBHUB_API_KEY",
+      "endpoint": "https://api.stubhub.com/sellers/search/events/v3",
+      "data_fields": ["listingCount", "minPrice", "maxPrice"],
+      "processing": "Resale price spike + listing velocity → crowd pressure proxy",
+      "fallback": "simulate",
+      "note": "Can use Google Trends as free proxy for ticket demand"
+    }
+  ],
+  "composite_scoring": {
+    "formula": "twitter * 0.35 + weather * 0.25 + density * 0.25 + velocity * 0.15",
+    "confidence_method": "1 - (variance_of_signals / 0.083) * 0.65",
+    "risk_thresholds": {
+      "LOW": "< 0.30",
+      "MODERATE": "0.30 - 0.60",
+      "HIGH": "0.60 - 0.80",
+      "CRITICAL": "> 0.80"
+    }
+  }
+}

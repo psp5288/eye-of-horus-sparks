@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eye of Horus: Sparks — See. Predict. Act.</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Header rail ─────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <!-- Animated Wedjat logo (hover to reveal wordmark) -->
+      <div class="eoh-logo" id="header-logo" data-variant="hover" style="width:40px;max-width:40px;flex:0 0 auto"></div>
+      <div class="logo-wordmark">
+        Eye of <i>Horus</i>
+        <small>Sparks</small>
+      </div>
+    </div>
+    <div class="header-right mono">
+      <span>Event · <b id="active-event-name">Loading…</b></span>
+      <span class="badge-live">Live</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ── Iris Panel ── -->
+  <section class="panel panel-iris">
+    <div class="panel-header">
+      <h2>Iris <span class="subtitle">Real-Time</span></h2>
+      <button class="btn-icon mono" id="iris-refresh-btn" title="Refresh signals">↻</button>
+    </div>
+
+    <!-- Risk gauge -->
+    <div class="risk-gauge-container">
+      <canvas id="risk-gauge" width="200" height="200"></canvas>
+      <div class="gauge-center">
+        <span class="gauge-score" id="risk-score-display">—</span>
+        <span class="gauge-label" id="risk-level-display">—</span>
+      </div>
+    </div>
+
+    <!-- Signal bars -->
+    <div class="signal-bars">
+      <div class="signal-row">
+        <span class="signal-name mono">Twitter</span>
+        <div class="signal-bar-track"><div class="signal-bar" id="bar-twitter"></div></div>
+        <span class="signal-val mono" id="val-twitter">—</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-name mono">Weather</span>
+        <div class="signal-bar-track"><div class="signal-bar" id="bar-weather"></div></div>
+        <span class="signal-val mono" id="val-weather">—</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-name mono">Density</span>
+        <div class="signal-bar-track"><div class="signal-bar" id="bar-density"></div></div>
+        <span class="signal-val mono" id="val-density">—</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-name mono">Velocity</span>
+        <div class="signal-bar-track"><div class="signal-bar" id="bar-velocity"></div></div>
+        <span class="signal-val mono" id="val-velocity">—</span>
+      </div>
+    </div>
+
+    <!-- Severity indicator — maps to risk level with animated pupils -->
+    <div class="severity-row" id="severity-row">
+      <div class="sev-chip" data-sev="nominal">
+        <div class="sev-mark" id="sev-0"></div>
+        <span class="sev-lbl mono">L0 · Calm</span>
+      </div>
+      <div class="sev-chip" data-sev="watch">
+        <div class="sev-mark" id="sev-1"></div>
+        <span class="sev-lbl mono">L1 · Watch</span>
+      </div>
+      <div class="sev-chip" data-sev="elevated">
+        <div class="sev-mark" id="sev-2"></div>
+        <span class="sev-lbl mono">L2 · Elevated</span>
+      </div>
+      <div class="sev-chip" data-sev="critical">
+        <div class="sev-mark" id="sev-3"></div>
+        <span class="sev-lbl mono">L3 · Critical</span>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div class="alert-box hidden" id="iris-alert">
+      <span class="alert-icon">⚠</span>
+      <span id="iris-alert-text"></span>
+    </div>
+
+    <!-- Claude interpret -->
+    <button class="btn btn-primary" id="interpret-btn">
+      Ask Claude to Interpret
+    </button>
+    <div class="claude-output hidden" id="claude-interpret-output"></div>
+
+    <div class="confidence-row">
+      <span class="mono">Confidence</span>
+      <span id="confidence-display" class="confidence-val mono">—</span>
+    </div>
+  </section>
+
+  <!-- ── Oracle Panel ── -->
+  <section class="panel panel-oracle">
+    <div class="panel-header">
+      <h2>Oracle <span class="subtitle">Swarm Simulation</span></h2>
+    </div>
+
+    <!-- Simulation config -->
+    <div class="sim-config">
+      <div class="config-row">
+        <label class="mono">Scenario</label>
+        <select id="scenario-select" class="select">
+          <option value="concert_general_admission">Concert · GA</option>
+          <option value="festival_multi_stage">Festival · Multi-Stage</option>
+          <option value="stadium_sports">Stadium · Sports</option>
+        </select>
+      </div>
+      <div class="config-row">
+        <label class="mono">Incident</label>
+        <select id="incident-select" class="select">
+          <option value="crowd_surge">Crowd Surge</option>
+          <option value="evacuation">Evacuation</option>
+          <option value="medical">Medical Emergency</option>
+          <option value="fire">Fire</option>
+        </select>
+      </div>
+      <div class="config-row">
+        <label class="mono">Agents</label>
+        <input type="range" id="agent-count" min="1000" max="10000" step="1000" value="10000" />
+        <span id="agent-count-display" class="mono" style="font-size:12px;white-space:nowrap">10,000</span>
+      </div>
+      <div class="config-row">
+        <label class="mono">Claude</label>
+        <input type="checkbox" id="use-claude" checked />
+        <span class="mono" style="font-size:11px;color:var(--muted)">Reasoning on</span>
+      </div>
+    </div>
+
+    <button class="btn btn-simulate" id="run-sim-btn">▶ Run Simulation</button>
+
+    <!-- Results -->
+    <div class="sim-results hidden" id="sim-results">
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="result-val" id="evac-time">—</div>
+          <div class="result-lbl mono">Evacuation Time</div>
+        </div>
+        <div class="result-card">
+          <div class="result-val" id="peak-density">—</div>
+          <div class="result-lbl mono">Peak Density / m²</div>
+        </div>
+        <div class="result-card">
+          <div class="result-val" id="injury-risk">—</div>
+          <div class="result-lbl mono">Injury Risk</div>
+        </div>
+        <div class="result-card">
+          <div class="result-val" id="evacuated-count">—</div>
+          <div class="result-lbl mono">Safely Evacuated</div>
+        </div>
+      </div>
+
+      <canvas id="sentiment-chart" height="100"></canvas>
+
+      <div class="recs-section">
+        <h3 class="mono">Claude Recommendations</h3>
+        <ul id="recs-list" class="recs-list"></ul>
+      </div>
+      <div class="bottleneck-section">
+        <h3 class="mono">Bottleneck Locations</h3>
+        <ul id="bottleneck-list" class="bottleneck-list"></ul>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary" id="suggest-btn" style="margin-top:8px">
+      Suggest Scenarios via Claude
+    </button>
+    <div class="claude-output hidden" id="scenario-suggestions"></div>
+  </section>
+
+  <!-- ── Stats bar ── -->
+  <section class="stats-bar">
+    <div class="stat">
+      <span class="stat-val" id="stat-agents">10,000</span>
+      <span class="stat-lbl mono">Agents</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" id="stat-accuracy">92%</span>
+      <span class="stat-lbl mono">Backtest Accuracy</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" id="stat-events">3</span>
+      <span class="stat-lbl mono">Events Validated</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" id="stat-model">Opus 4.7</span>
+      <span class="stat-lbl mono">AI Model</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" style="font-size:18px;letter-spacing:-.01em">See. Predict. Act.</span>
+      <span class="stat-lbl mono">Tagline</span>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Loading overlay ── -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-text" class="mono">Running simulation…</div>
+</div>
+
+<script src="js/logo.js"></script>
+<script src="js/api.js"></script>
+<script src="js/iris_dashboard.js"></script>
+<script src="js/oracle_simulator.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
