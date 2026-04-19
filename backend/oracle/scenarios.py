@@ -1,118 +1,118 @@
 """Scenario definitions and simulation request models."""
 
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field
-from typing import Optional
-import json
-import os
 
 
-class CrowdProfile(BaseModel):
-    casual: float = 0.40
-    friends_group: float = 0.30
-    influencer: float = 0.10
-    staff: float = 0.15
-    non_compliant: float = 0.05
-
-
-class EventConfig(BaseModel):
-    venue_name: str = "Demo Venue"
-    capacity: int = 20000
-    current_attendance: int = 18000
-    venue_width_m: float = 200.0
-    venue_height_m: float = 150.0
-    exit_count: int = 4
-    crowd_profile: CrowdProfile = Field(default_factory=CrowdProfile)
-
-
-class IncidentConfig(BaseModel):
-    type: str = "crowd_surge"
-    location: str = "main_stage_pit"
-    trigger_time_seconds: int = 180
-    severity: str = "high"
-
-
-class SimulationConfig(BaseModel):
-    agent_count: int = Field(default=10000, le=10000)
-    duration_seconds: int = Field(default=600, le=600)
-    use_claude_reasoning: bool = True
-
-
-class SimulateRequest(BaseModel):
-    scenario_id: str = "concert_general_admission"
-    event_config: EventConfig = Field(default_factory=EventConfig)
-    incident: IncidentConfig = Field(default_factory=IncidentConfig)
-    simulation_config: SimulationConfig = Field(default_factory=SimulationConfig)
-
-
-def get_built_in_scenarios() -> list[dict]:
-    """Return list of built-in scenario descriptors."""
-    return [
-        {
-            "id": "concert_general_admission",
-            "name": "Concert: General Admission",
-            "description": "High-energy GA floor, 10k–25k capacity",
-            "incident_types": ["surge", "medical", "weather", "evacuation"],
-        },
-        {
-            "id": "festival_multi_stage",
-            "name": "Festival: Multi-Stage",
-            "description": "Large outdoor festival with multiple stages",
-            "incident_types": ["surge", "fire", "weather", "crowd_crush"],
-        },
-        {
-            "id": "stadium_sports",
-            "name": "Stadium: Sports Event",
-            "description": "Seated stadium, 50k–80k capacity",
-            "incident_types": ["evacuation", "fight", "medical", "fire"],
-        },
-    ]
-
-
-async def run_backtest(event_ids: list[str], simulation_config: dict) -> dict:
-    """Run simulations against historical events and compare to known outcomes.
-
-    Loads historical data from data/backtest_events.json.
-    """
-    data_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "data", "backtest_events.json"
+class Scenario(BaseModel):
+    """A simulation scenario defining an incident type, timing, and parameters."""
+    name: str = "Custom Scenario"
+    description: str = ""
+    incident_type: str = Field(
+        "crowd_surge",
+        description="One of: crowd_surge|medical|fire|weather|evacuation|fight",
     )
+    trigger_time_s: int = Field(1800, ge=0, le=7200, description="Seconds into event when incident triggers")
+    severity: str = Field("medium", description="low|medium|high")
+    parameters: dict[str, Any] = {}
 
-    try:
-        with open(data_path) as f:
-            historical = {e["id"]: e for e in json.load(f).get("events", [])}
-    except FileNotFoundError:
-        historical = {}
 
-    results = []
-    total_accuracy = 0.0
+SCENARIO_TEMPLATES: dict[str, Scenario] = {
+    "stage_rush": Scenario(
+        name="Stage Rush",
+        description="Fans surge toward stage after surprise announcement.",
+        incident_type="crowd_surge",
+        trigger_time_s=1800,
+        severity="high",
+        parameters={"surge_multiplier": 2.0, "origin": "main_stage"},
+    ),
+    "medical_cluster": Scenario(
+        name="Medical Emergency Cluster",
+        description="Multiple heat-related medical incidents near centre crowd.",
+        incident_type="medical",
+        trigger_time_s=900,
+        severity="medium",
+        parameters={"affected_radius_m": 30, "incident_count": 4},
+    ),
+    "controlled_evacuation": Scenario(
+        name="Controlled Evacuation",
+        description="Orderly evacuation drill with low-urgency PA announcement.",
+        incident_type="evacuation",
+        trigger_time_s=3600,
+        severity="low",
+        parameters={"announcement_delay_s": 60, "staff_directed": True},
+    ),
+    "weather_emergency": Scenario(
+        name="Severe Weather",
+        description="Sudden storm forces evacuation of outdoor areas.",
+        incident_type="weather",
+        trigger_time_s=2400,
+        severity="high",
+        parameters={"wind_speed_mph": 45, "lightning_detected": True},
+    ),
+    "fight_at_barrier": Scenario(
+        name="Barrier Altercation",
+        description="Fight breaks out near main stage barrier, causing local panic.",
+        incident_type="fight",
+        trigger_time_s=5400,
+        severity="medium",
+        parameters={"involved_agents": 15, "location": "main_stage_barrier"},
+    ),
+}
 
-    for event_id in event_ids:
-        event_data = historical.get(event_id)
-        if not event_data:
-            continue
 
-        # Stub: in hackathon Day 4, wire real simulation results
-        predicted_score = event_data.get("predicted_risk_score", 0.75)
-        actual = event_data.get("actual_risk_level", "HIGH")
-        accuracy = event_data.get("historical_accuracy", 0.91)
+def parse_scenario_input(input_dict: dict) -> Scenario:
+    """
+    Parse a scenario from a raw request dict.
 
-        results.append(
-            {
-                "event_id": event_id,
-                "event_name": event_data.get("name", event_id),
-                "predicted_risk_score": predicted_score,
-                "actual_risk_level": actual,
-                "accuracy": accuracy,
-                "model_assessment": event_data.get("notes", ""),
-            }
-        )
-        total_accuracy += accuracy
+    Parameters
+    ----------
+    input_dict : dict
+        Raw scenario parameters from API request.
 
-    overall = total_accuracy / len(results) if results else 0.0
+    Returns
+    -------
+    Scenario
+        Parsed and validated scenario object.
+    """
+    if not input_dict:
+        return SCENARIO_TEMPLATES["stage_rush"]
 
-    return {
-        "backtest_id": f"bt_{hash(tuple(event_ids)) % 100000:05d}",
-        "results": results,
-        "overall_accuracy": round(overall, 3),
-        "target_met": overall >= 0.92,
-    }
+    template_key = input_dict.get("template")
+    if template_key and template_key in SCENARIO_TEMPLATES:
+        return SCENARIO_TEMPLATES[template_key]
+
+    return Scenario(**{k: v for k, v in input_dict.items() if k in Scenario.model_fields})
+
+
+def create_scenario_from_params(
+    event_id: str,
+    incident_type: str = "crowd_surge",
+    severity: str = "medium",
+    trigger_time_s: int = 1800,
+    parameters: Optional[dict] = None,
+) -> Scenario:
+    """
+    Build a scenario object from explicit parameters.
+
+    Parameters
+    ----------
+    event_id : str
+        Event identifier (used for context; not stored in scenario).
+    incident_type : str
+    severity : str
+    trigger_time_s : int
+    parameters : dict | None
+
+    Returns
+    -------
+    Scenario
+    """
+    return Scenario(
+        name=f"{incident_type.replace('_', ' ').title()} — {event_id}",
+        incident_type=incident_type,
+        severity=severity,
+        trigger_time_s=trigger_time_s,
+        parameters=parameters or {},
+    )
