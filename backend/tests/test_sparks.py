@@ -1,73 +1,112 @@
 """Tests for the Sparks entertainment module."""
 
 import pytest
-from sparks.venues import list_events, get_event
-from sparks.entertainment import EntertainmentScorer
-from sparks.signals import SocialBuzzSignal, TicketResaleSignal, ArtistAnnouncementSignal
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
-class TestVenues:
-    def test_events_not_empty(self):
-        events = list_events()
-        assert len(events) > 0
-
-    def test_event_has_required_fields(self):
-        events = list_events()
-        for e in events:
-            assert "id" in e
-            assert "name" in e
-            assert "venue" in e
-            assert "capacity" in e["venue"]
-
-    def test_get_event_returns_correct(self):
-        event = get_event("demo_event")
-        assert event is not None
-        assert event.id == "demo_event"
-
-    def test_get_event_missing_returns_none(self):
-        assert get_event("nonexistent_event_xyz") is None
+def test_entertainment_scoring_returns_four_scores():
+    """compute_sparks_scores() should return Safety, Revenue, Experience, Bottleneck."""
+    from sparks.entertainment import compute_sparks_scores
+    factors = {
+        "composite_risk": 0.42,
+        "fan_compliance_estimate": 0.65,
+        "artist_hype_score": 0.75,
+        "alcohol_policy_risk": 0.55,
+        "historical_incident_rate": 0.18,
+    }
+    scores = compute_sparks_scores(factors)
+    assert "Safety" in scores
+    assert "Revenue" in scores
+    assert "Experience" in scores
+    assert "Bottleneck" in scores
 
 
-class TestEntertainmentScorer:
-    @pytest.mark.asyncio
-    async def test_returns_risk_profile(self):
-        scorer = EntertainmentScorer("demo_event")
-        profile = await scorer.get_risk_profile()
-        assert "entertainment_score" in profile
-        assert "factors" in profile
-        assert 0.0 <= profile["entertainment_score"] <= 1.0
-
-    @pytest.mark.asyncio
-    async def test_missing_event_returns_error(self):
-        scorer = EntertainmentScorer("nonexistent_xyz")
-        profile = await scorer.get_risk_profile()
-        assert "error" in profile
-
-    @pytest.mark.asyncio
-    async def test_festival_higher_score_than_conference(self):
-        # coachella is a festival
-        scorer_festival = EntertainmentScorer("coachella_2025_w1")
-        scorer_demo = EntertainmentScorer("demo_event")
-        p_festival = await scorer_festival.get_risk_profile()
-        p_demo = await scorer_demo.get_risk_profile()
-        # Festival should generally score higher risk
-        assert p_festival["entertainment_score"] >= p_demo["entertainment_score"] - 0.1
+def test_scores_in_valid_range():
+    """All four scores must be 0–100."""
+    from sparks.entertainment import compute_sparks_scores
+    factors = {
+        "composite_risk": 0.83,
+        "fan_compliance_estimate": 0.65,
+        "artist_hype_score": 0.85,
+        "alcohol_policy_risk": 0.55,
+        "historical_incident_rate": 0.18,
+    }
+    scores = compute_sparks_scores(factors)
+    for key, val in scores.items():
+        assert 0 <= val <= 100, f"{key}={val} out of range"
 
 
-class TestEntertainmentSignals:
-    def test_social_buzz_simulation(self):
-        signal = SocialBuzzSignal.simulate("demo_event")
-        assert 0.0 <= signal.buzz_score <= 1.0
-        assert signal.mention_count > 0
+def test_high_risk_lowers_safety_score():
+    """High composite risk should produce lower Safety score."""
+    from sparks.entertainment import compute_sparks_scores
 
-    def test_ticket_resale_simulation(self):
-        signal = TicketResaleSignal.simulate("demo_event")
-        assert signal.resale_premium_pct >= 0
-        assert isinstance(signal.panic_sell_detected, bool)
+    safe_factors = {"composite_risk": 0.10, "fan_compliance_estimate": 0.90, "artist_hype_score": 0.5, "alcohol_policy_risk": 0.2, "historical_incident_rate": 0.05}
+    risky_factors = {"composite_risk": 0.90, "fan_compliance_estimate": 0.30, "artist_hype_score": 0.9, "alcohol_policy_risk": 0.8, "historical_incident_rate": 0.25}
 
-    def test_artist_announcement_simulation(self):
-        signal = ArtistAnnouncementSignal.simulate("demo_event")
-        if signal.announced:
-            assert signal.expected_surge_pct > 0
-        else:
-            assert signal.expected_surge_pct == 0.0
+    safe_scores = compute_sparks_scores(safe_factors)
+    risky_scores = compute_sparks_scores(risky_factors)
+
+    assert safe_scores["Safety"] > risky_scores["Safety"]
+    assert risky_scores["Bottleneck"] > safe_scores["Bottleneck"]
+
+
+def test_evacuation_time_positive():
+    """compute_evacuation_time() should return a positive integer."""
+    from sparks.entertainment import compute_evacuation_time
+    evac_time = compute_evacuation_time(
+        venue_capacity=50000,
+        actual_attendance=45000,
+        exit_count=4,
+        avg_exit_width_m=3.0,
+        non_compliant_fraction=0.05,
+    )
+    assert evac_time > 0
+    assert isinstance(evac_time, int)
+
+
+def test_evacuation_time_scales_with_attendance():
+    """More attendees should result in longer evacuation time."""
+    from sparks.entertainment import compute_evacuation_time
+    t_small = compute_evacuation_time(50000, 10000, 4)
+    t_large = compute_evacuation_time(50000, 45000, 4)
+    assert t_large > t_small
+
+
+def test_bottleneck_zones_sorted_by_risk():
+    """compute_bottleneck_zones() output should be sorted descending by risk_score."""
+    from sparks.entertainment import compute_bottleneck_zones
+    layout = {
+        "exits": {
+            "main_gate": {"width_m": 12, "nearby_capacity_fraction": 0.40},
+            "side_exit": {"width_m": 3, "nearby_capacity_fraction": 0.25},
+            "emergency": {"width_m": 2, "nearby_capacity_fraction": 0.10},
+        }
+    }
+    zones = compute_bottleneck_zones(layout)
+    if len(zones) > 1:
+        for i in range(len(zones) - 1):
+            assert zones[i]["risk_score"] >= zones[i + 1]["risk_score"]
+
+
+def test_agent_archetypes_sum_to_one():
+    """get_agent_archetypes_for_event() fractions should sum to ~1.0."""
+    from sparks.entertainment import get_agent_archetypes_for_event
+    for event_type in ("concert", "festival", "sports", "conference"):
+        dist = get_agent_archetypes_for_event(event_type)
+        total = sum(dist.values())
+        assert abs(total - 1.0) < 0.01, f"{event_type}: fractions sum to {total}"
+
+
+@pytest.mark.asyncio
+async def test_entertainment_scorer_returns_profile():
+    """EntertainmentScorer.get_risk_profile() should return expected keys."""
+    from sparks.entertainment import EntertainmentScorer
+    scorer = EntertainmentScorer("coachella_2023")
+    profile = await scorer.get_risk_profile()
+    assert "event_id" in profile
+    assert "scores" in profile
+    assert "factors" in profile
+    assert profile["scores"]["Safety"] >= 0

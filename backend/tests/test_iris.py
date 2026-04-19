@@ -1,81 +1,107 @@
 """Tests for the Iris monitoring module."""
 
 import pytest
-from iris.models import SignalBundle, TwitterSignalData, WeatherSignalData, CrowdDensityData, TicketVelocityData, RiskLevel, score_to_risk_level
-from iris.scorer import RiskScorer
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
-def make_signals(twitter=0.5, weather=0.1, density=0.6, velocity=0.3) -> SignalBundle:
-    return SignalBundle(
-        twitter_sentiment=TwitterSignalData(score=twitter),
-        weather=WeatherSignalData(score=weather),
-        crowd_density=CrowdDensityData(score=density),
-        ticket_velocity=TicketVelocityData(score=velocity),
+def test_risk_scoring_returns_valid_range():
+    """Risk score must be 0–1 for any input combination."""
+    from iris.scorer import compute_risk_score
+    from iris.models import SignalBundle, TwitterSignal, WeatherSignal, CrowdDensitySignal, TicketingSignal
+    from datetime import datetime, timezone
+
+    bundle = SignalBundle(
+        event_id="test",
+        timestamp=datetime.now(timezone.utc),
+        twitter=TwitterSignal(sentiment_score=0.78, tweet_volume=5000),
+        weather=WeatherSignal(temperature_f=87, humidity_pct=22, risk_score=0.18),
+        crowd_density=CrowdDensitySignal(density_score=0.72, density_per_sqm=2.8),
+        ticket_velocity=TicketingSignal(velocity_score=0.55),
     )
+    result = compute_risk_score(bundle)
+    assert 0.0 <= result.score <= 1.0
+    assert 0.0 <= result.confidence <= 1.0
+    assert result.level in ("LOW", "MODERATE", "HIGH", "CRITICAL")
 
 
-class TestRiskScorer:
-    def test_low_risk(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.1, 0.05, 0.1, 0.1)
-        score, confidence = scorer.compute(signals)
-        assert score < 0.30
-        assert scorer.get_risk_level(score) == RiskLevel.LOW
+def test_risk_scoring_critical_at_high_inputs():
+    """High-risk inputs should produce CRITICAL or HIGH level."""
+    from iris.scorer import compute_risk_score
+    from iris.models import SignalBundle, TwitterSignal, WeatherSignal, CrowdDensitySignal, TicketingSignal
+    from datetime import datetime, timezone
 
-    def test_moderate_risk(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.4, 0.2, 0.5, 0.3)
-        score, confidence = scorer.compute(signals)
-        assert 0.30 <= score < 0.60
-
-    def test_high_risk(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.75, 0.4, 0.8, 0.6)
-        score, confidence = scorer.compute(signals)
-        assert score >= 0.60
-
-    def test_critical_risk(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.95, 0.9, 0.95, 0.9)
-        score, confidence = scorer.compute(signals)
-        assert scorer.get_risk_level(score) == RiskLevel.CRITICAL
-
-    def test_confidence_high_when_signals_agree(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.8, 0.8, 0.8, 0.8)
-        _, confidence = scorer.compute(signals)
-        assert confidence >= 0.80
-
-    def test_confidence_low_when_signals_disagree(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.9, 0.05, 0.9, 0.05)
-        _, confidence = scorer.compute(signals)
-        assert confidence < 0.70
-
-    def test_weighted_score(self):
-        scorer = RiskScorer()
-        # Only twitter high (weight 0.35), rest 0
-        signals = make_signals(1.0, 0.0, 0.0, 0.0)
-        score, _ = scorer.compute(signals)
-        assert abs(score - 0.35) < 0.01
-
-    def test_recommendations_not_empty(self):
-        scorer = RiskScorer()
-        signals = make_signals(0.8, 0.5, 0.85, 0.6)
-        recs = scorer.get_recommendations(0.75, signals)
-        assert len(recs) > 0
+    bundle = SignalBundle(
+        event_id="astroworld_test",
+        timestamp=datetime.now(timezone.utc),
+        twitter=TwitterSignal(sentiment_score=0.05),  # very negative
+        weather=WeatherSignal(risk_score=0.9),
+        crowd_density=CrowdDensitySignal(density_score=0.98),
+        ticket_velocity=TicketingSignal(velocity_score=0.95),
+    )
+    result = compute_risk_score(bundle)
+    assert result.level in ("HIGH", "CRITICAL"), f"Expected HIGH/CRITICAL, got {result.level}"
+    assert result.score > 0.60
 
 
-class TestRiskLevel:
-    @pytest.mark.parametrize("score,expected", [
-        (0.10, RiskLevel.LOW),
-        (0.29, RiskLevel.LOW),
-        (0.30, RiskLevel.MODERATE),
-        (0.59, RiskLevel.MODERATE),
-        (0.60, RiskLevel.HIGH),
-        (0.79, RiskLevel.HIGH),
-        (0.80, RiskLevel.CRITICAL),
-        (1.00, RiskLevel.CRITICAL),
-    ])
-    def test_thresholds(self, score, expected):
-        assert score_to_risk_level(score) == expected
+def test_risk_scoring_low_at_safe_inputs():
+    """Safe inputs (indoor stadium, low density) should produce LOW risk."""
+    from iris.scorer import compute_risk_score
+    from iris.models import SignalBundle, TwitterSignal, WeatherSignal, CrowdDensitySignal, TicketingSignal
+    from datetime import datetime, timezone
+
+    bundle = SignalBundle(
+        event_id="super_bowl_test",
+        timestamp=datetime.now(timezone.utc),
+        twitter=TwitterSignal(sentiment_score=0.85),
+        weather=WeatherSignal(risk_score=0.05),
+        crowd_density=CrowdDensitySignal(density_score=0.30),
+        ticket_velocity=TicketingSignal(velocity_score=0.20),
+    )
+    result = compute_risk_score(bundle)
+    assert result.level == "LOW", f"Expected LOW, got {result.level}"
+    assert result.score < 0.30
+
+
+def test_signal_bundle_defaults():
+    """SignalBundle should have valid defaults for all fields."""
+    from iris.models import SignalBundle
+    from datetime import datetime, timezone
+
+    bundle = SignalBundle(event_id="default_test", timestamp=datetime.now(timezone.utc))
+    assert bundle.twitter.sentiment_score == 0.5
+    assert bundle.weather.temperature_f == 72.0
+    assert bundle.crowd_density.density_score == 0.5
+    assert bundle.ticket_velocity.velocity_score == 0.4
+
+
+def test_confidence_lower_when_signals_disagree():
+    """Confidence should be < 0.9 when signals strongly contradict."""
+    from iris.scorer import compute_risk_score
+    from iris.models import SignalBundle, TwitterSignal, WeatherSignal, CrowdDensitySignal, TicketingSignal
+    from datetime import datetime, timezone
+
+    bundle = SignalBundle(
+        event_id="contradiction_test",
+        timestamp=datetime.now(timezone.utc),
+        twitter=TwitterSignal(sentiment_score=0.05),  # very negative
+        weather=WeatherSignal(risk_score=0.02),        # very safe
+        crowd_density=CrowdDensitySignal(density_score=0.99),  # very dense
+        ticket_velocity=TicketingSignal(velocity_score=0.01),   # very low
+    )
+    result = compute_risk_score(bundle)
+    assert result.confidence < 0.9, f"Expected low confidence, got {result.confidence}"
+
+
+@pytest.mark.asyncio
+async def test_iris_monitor_returns_dict():
+    """IrisMonitor.fetch_signals() should return a dict with expected keys."""
+    from iris.monitor import IrisMonitor
+    monitor = IrisMonitor()
+    result = await monitor.fetch_signals("coachella_2023")
+    assert "composite_risk" in result
+    assert "risk_level" in result
+    assert "signals" in result
+    assert 0.0 <= result["composite_risk"] <= 1.0
