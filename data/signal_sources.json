@@ -1,72 +1,79 @@
 {
-  "version": "1.0",
-  "sources": [
-    {
-      "id": "twitter_v2",
-      "name": "Twitter / X API v2",
-      "type": "social_media",
-      "weight": 0.35,
-      "update_interval_seconds": 30,
-      "free_tier": true,
-      "rate_limit": "500k tweets/month on Basic ($100/mo) or 10k/month free",
-      "env_var": "TWITTER_BEARER_TOKEN",
-      "endpoint": "https://api.twitter.com/2/tweets/search/recent",
-      "data_fields": ["text", "created_at", "public_metrics"],
-      "processing": "VADER sentiment → risk score (0=positive, 1=negative)",
-      "fallback": "simulate"
+  "version": "1.1",
+  "description": "Signal source definitions for the Iris monitoring module.",
+  "signal_weights": {
+    "twitter_sentiment": 0.35,
+    "crowd_density": 0.25,
+    "weather": 0.25,
+    "ticket_velocity": 0.15
+  },
+  "sources": {
+    "twitter_sentiment": {
+      "source": "Twitter API v2",
+      "keywords": ["concert", "festival", "venue", "crowd", "stage", "crush", "push", "emergency", "help"],
+      "confidence_weight": 0.60,
+      "freshness": "real-time",
+      "affects": ["overall_sentiment", "panic_risk"],
+      "invert": true,
+      "description": "Negative tweets lead physical crowd distress by ~20 minutes (validated Astroworld 2021)",
+      "api_endpoint": "https://api.twitter.com/2/tweets/search/recent"
     },
-    {
-      "id": "openweathermap",
-      "name": "OpenWeatherMap Current Weather",
-      "type": "environmental",
-      "weight": 0.25,
-      "update_interval_seconds": 300,
-      "free_tier": true,
-      "rate_limit": "1000 calls/day free",
-      "env_var": "OPENWEATHER_API_KEY",
-      "endpoint": "https://api.openweathermap.org/data/2.5/weather",
-      "data_fields": ["main.temp", "wind.speed", "weather.description"],
-      "processing": "Rule-based: heat + wind + storm conditions → risk score",
-      "fallback": "simulate"
+    "weather": {
+      "source": "OpenWeatherMap API",
+      "keywords": [],
+      "confidence_weight": 0.45,
+      "freshness": "10-minute intervals",
+      "affects": ["medical_risk", "crowd_behaviour"],
+      "invert": false,
+      "description": "High temperature + humidity increases medical incident probability. Risk formula: heat_score*0.5 + humidity_score*0.3 + condition_penalty",
+      "api_endpoint": "https://api.openweathermap.org/data/2.5/weather"
     },
-    {
-      "id": "ticketmaster",
-      "name": "Ticketmaster API",
-      "type": "ticketing",
-      "weight": 0.25,
-      "update_interval_seconds": 60,
-      "free_tier": true,
-      "rate_limit": "5000 calls/day free",
-      "env_var": "TICKETMASTER_KEY",
-      "endpoint": "https://app.ticketmaster.com/discovery/v2/events",
-      "data_fields": ["dates", "priceRanges", "seatmap"],
-      "processing": "Attendance estimate from sales data → density score",
-      "fallback": "simulate"
+    "crowd_density": {
+      "source": "Venue sensors / social check-in data",
+      "keywords": [],
+      "confidence_weight": 0.80,
+      "freshness": "1-minute intervals",
+      "affects": ["bottleneck_risk", "evacuation_time", "injury_risk"],
+      "invert": false,
+      "description": "Primary physical risk driver. Critical threshold: 4.5 persons/sqm. Astroworld 2021 reached 9.2/sqm",
+      "api_endpoint": "internal"
     },
-    {
-      "id": "ticket_velocity",
-      "name": "Ticket Resale Velocity",
-      "type": "secondary_market",
-      "weight": 0.15,
-      "update_interval_seconds": 120,
-      "free_tier": false,
-      "rate_limit": "Varies by provider",
-      "env_var": "STUBHUB_API_KEY",
-      "endpoint": "https://api.stubhub.com/sellers/search/events/v3",
-      "data_fields": ["listingCount", "minPrice", "maxPrice"],
-      "processing": "Resale price spike + listing velocity → crowd pressure proxy",
-      "fallback": "simulate",
-      "note": "Can use Google Trends as free proxy for ticket demand"
-    }
-  ],
-  "composite_scoring": {
-    "formula": "twitter * 0.35 + weather * 0.25 + density * 0.25 + velocity * 0.15",
-    "confidence_method": "1 - (variance_of_signals / 0.083) * 0.65",
-    "risk_thresholds": {
-      "LOW": "< 0.30",
-      "MODERATE": "0.30 - 0.60",
-      "HIGH": "0.60 - 0.80",
-      "CRITICAL": "> 0.80"
+    "ticket_velocity": {
+      "source": "Ticketmaster API + secondary resale market",
+      "keywords": [],
+      "confidence_weight": 0.35,
+      "freshness": "hourly",
+      "affects": ["expected_attendance", "non_compliance_estimate"],
+      "invert": false,
+      "description": "Resale price spikes (>40% premium) indicate demand exceeding venue capacity",
+      "api_endpoint": "https://app.ticketmaster.com/discovery/v2"
+    },
+    "social_checkins": {
+      "source": "Instagram / TikTok geotags",
+      "keywords": ["concert", "festival", "venue", "live"],
+      "confidence_weight": 0.25,
+      "freshness": "15-minute intervals",
+      "affects": ["attendance_estimate", "zone_density"],
+      "invert": false,
+      "description": "Social check-ins provide crowd distribution heatmap proxy"
+    },
+    "artist_sentiment": {
+      "source": "Twitter mentions of headliner",
+      "keywords": [],
+      "confidence_weight": 0.30,
+      "freshness": "real-time",
+      "affects": ["crowd_energy", "stage_rush_probability"],
+      "invert": false,
+      "description": "High artist hype score correlates with stage rush probability"
+    },
+    "wait_times": {
+      "source": "Venue app / staff reports",
+      "keywords": ["wait", "line", "queue"],
+      "confidence_weight": 0.40,
+      "freshness": "5-minute intervals",
+      "affects": ["bottleneck_locations", "exit_congestion"],
+      "invert": false,
+      "description": "Entry/exit queue data indicates bottleneck formation before density sensors trigger"
     }
   }
 }
