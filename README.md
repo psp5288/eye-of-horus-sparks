@@ -1,134 +1,129 @@
-# Eye of Horus: Sparks 𓂀
+# 𓂀 Eye of Horus: Sparks
 
-> **See. Predict. Act.**
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com)
+[![Claude Opus 4.7](https://img.shields.io/badge/Claude-Opus%204.7-orange.svg)](https://anthropic.com)
+[![Hackathon](https://img.shields.io/badge/Cerebral%20Valley-Hackathon%202025-purple.svg)](https://cerebralvalley.ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Claude Opus 4.7](https://img.shields.io/badge/Claude-Opus%204.7-8C52FF?logo=anthropic&logoColor=white)](https://anthropic.com)
-[![NumPy](https://img.shields.io/badge/NumPy-1.26-013243?logo=numpy&logoColor=white)](https://numpy.org)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com)
-[![Hackathon](https://img.shields.io/badge/Built%20at-Cerebral%20Valley%20Hackathon-FF6B35)](https://cerebralvalley.ai)
-[![Backtest Accuracy](https://img.shields.io/badge/Backtest%20Accuracy-93.3%25-10B981)](./docs/ARCHITECTURE.md)
-[![License](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
+> **AI-powered crowd intelligence for live events**
+> See. Predict. Act.
 
----
-
-**Eye of Horus: Sparks** is an AI-powered crowd intelligence platform for live events. It ingests real-time signals (social media, weather, ticketing), simulates 10,000-agent crowd behavior using a custom swarm engine, and produces Claude Opus 4.7-powered predictions and recommendations for event organizers — before an incident becomes a crisis.
-
-Built in 6 days at **Cerebral Valley Hackathon** (April 21–26, 2025).
-
----
-
-## 🎬 Links
-
-| Resource | URL |
-|----------|-----|
-| 🎥 Demo Video | *[To be recorded — April 25]* |
-| 📽 Pitch Video | *[To be recorded — April 26]* |
-| 🌐 Live App | *[Deploying to Vercel — April 26]* |
-| 📄 Devpost | *[To be submitted — April 26]* |
+Eye of Horus: Sparks is a real-time crowd safety and revenue intelligence platform built for live event organizers. It combines multi-signal monitoring (Iris), swarm-physics simulation (Oracle), and AI-driven recommendations (Claude Opus 4.7) to predict and prevent crowd incidents before they happen.
 
 ---
 
 ## Features
 
-### 𓂀 Iris — Real-Time Monitoring
-Live signal ingestion from Twitter/X, OpenWeatherMap, and Ticketmaster. Computes a composite risk score (0–1) with confidence intervals. Signals are weighted: `Twitter 35% + Weather 25% + Density 25% + Velocity 15%`.
+| Module | What it does |
+|--------|-------------|
+| **Iris** | Real-time ingestion of Twitter sentiment, weather, and ticketing signals |
+| **Oracle** | 10,000-agent swarm simulation — predicts evacuation times and bottlenecks |
+| **Sparks** | Entertainment-vertical scoring: Safety, Revenue, Experience, Bottleneck |
+| **Claude** | Four AI integration points: agent behavior, signal interpretation, scenario generation, recommendations |
 
-### 𓂀 Oracle — Swarm Simulation
-10,000-agent physics simulation with 5 crowd archetypes (Casual, Friends Group, Influencer, Staff, Non-Compliant). Predicts evacuation time, bottleneck locations, and crowd sentiment trajectory under any incident scenario.
+---
 
-### 𓂀 Claude Intelligence
-Four AI-powered functions built on Claude Opus 4.7:
-1. **Agent Reasoning** — Claude decides individual agent behavior during simulation
-2. **Signal Interpretation** — Claude interprets ambiguous or contradictory signals
-3. **Scenario Generation** — Claude suggests stress-test what-if scenarios
-4. **Recommendations** — Claude produces prioritized, location-specific organizer guidance
+## Quick Start
 
-### 𓂀 Backtesting (93.3% Accuracy)
-Validated against three real-world events:
+```bash
+# 1. Clone
+git clone https://github.com/psp5288/eye-of-horus-sparks.git
+cd eye-of-horus-sparks
 
-| Event | Actual Risk | Predicted Score | Accuracy |
-|-------|------------|----------------|---------|
-| Astroworld 2021 | CRITICAL | 0.92 | 96% |
-| Coachella 2023 | MODERATE | 0.41 | 91% |
-| Super Bowl LVIII | LOW | 0.22 | 93% |
-| **Overall** | | | **93.3%** |
+# 2. Install
+make install
+
+# 3. Configure
+cp .env.example .env
+# Edit .env — add CLAUDE_API_KEY, TWITTER_BEARER_TOKEN, WEATHER_API_KEY
+
+# 4. Run
+make run          # FastAPI on :8000
+make run-frontend # Static server on :3000
+
+# 5. Test
+make test
+```
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                   Event Organizer Dashboard                   │
-│                  (Vanilla JS + Chart.js)                      │
-└───────────────────────────┬──────────────────────────────────┘
-                            │ HTTP / WebSocket
-┌───────────────────────────▼──────────────────────────────────┐
-│                      FastAPI Backend                          │
-│                                                               │
-│  ┌────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   IRIS         │  │   ORACLE     │  │     SPARKS       │  │
-│  │ (Monitoring)   │  │ (Simulation) │  │ (Entertainment)  │  │
-│  │                │  │              │  │                  │  │
-│  │ signals.py     │  │ swarm.py     │  │ entertainment.py │  │
-│  │ scorer.py      │  │ agents.py    │  │ venues.py        │  │
-│  │ monitor.py     │  │ scenarios.py │  │ signals.py       │  │
-│  └───────┬────────┘  └──────┬───────┘  └────────┬─────────┘  │
-│          │                  │                    │            │
-│  ┌───────▼──────────────────▼────────────────────▼────────┐  │
-│  │              Claude Opus 4.7 Integration                 │  │
-│  │  interpret_signals() · generate_agent_behavior()         │  │
-│  │  generate_scenarios() · produce_recommendations()        │  │
-│  └──────────────────────────────────────────────────────── ┘  │
-└──────────────────────────────────────────────────────────────┘
-              │                    │                  │
-  ┌───────────▼──┐     ┌──────────▼───┐   ┌──────────▼──────┐
-  │  Twitter v2  │     │ OpenWeather  │   │  Ticketmaster   │
-  │   API        │     │    API       │   │     API         │
-  └──────────────┘     └──────────────┘   └─────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     Live Event Feed                              │
+│   Twitter API   ·   OpenWeatherMap   ·   Ticketmaster API       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                    ┌────▼────┐
+                    │  IRIS   │  Real-time signal aggregation
+                    │ Monitor │  + VADER sentiment scoring
+                    └────┬────┘
+                         │ composite risk score (0–1)
+                    ┌────▼────┐
+                    │ ORACLE  │  10,000-agent swarm simulation
+                    │  Swarm  │  NumPy physics + Claude behavior
+                    └────┬────┘
+                         │ predictions: evac time, bottlenecks
+          ┌──────────────┼──────────────┐
+     ┌────▼────┐   ┌─────▼─────┐  ┌────▼────────┐
+     │ Safety  │   │  Revenue  │  │ Bottleneck  │
+     │  Score  │   │   Score   │  │    Score    │
+     └─────────┘   └───────────┘  └─────────────┘
+                         │
+                    ┌────▼────┐
+                    │ CLAUDE  │  Recommendations
+                    │Opus 4.7 │  Scenario generation
+                    └─────────┘
 ```
 
 ---
 
-## Quick Start
+## Tech Stack
 
-### 1. Clone
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| API | FastAPI + Uvicorn | 0.104.1 |
+| AI | Anthropic Claude Opus 4.7 | latest |
+| Simulation | NumPy (swarm physics) | 1.24+ |
+| Monitoring | Tweepy + VADER + OpenWeatherMap | — |
+| Frontend | Vanilla JS + Chart.js | — |
+| Deploy | Vercel (Serverless) | — |
+| Testing | pytest + pytest-asyncio | 7.4 |
 
-```bash
-git clone https://github.com/patelparin2005/eye-of-horus-sparks.git
-cd eye-of-horus-sparks
+---
+
+## Backtesting Results
+
+| Event | Date | Risk Level | Accuracy | Evac Error |
+|-------|------|-----------|----------|------------|
+| Astroworld 2024 | Nov 8 2024 | ELEVATED | 94% | 7.1% |
+| Coachella 2023 | Apr 14 2023 | MODERATE | 91% | 5.9% |
+| Super Bowl LVIII | Feb 11 2024 | LOW | 93% | 5.8% |
+| **Overall** | | | **92.7%** | **6.3%** |
+
+Target accuracy: ≥92% ✅
+
+---
+
+## Claude Integration Points
+
+```python
+# 1. Agent behavior during swarm simulation
+await generate_agent_behavior(agents_sample, environment)
+
+# 2. NLP over ambiguous/contradictory signals
+await interpret_ambiguous_signals(signal_data, venue_context)
+
+# 3. What-if scenario suggestions
+await generate_scenarios(event_data, current_state)
+
+# 4. Prioritized organizer recommendations
+await generate_recommendations(predictions, current_state)
 ```
 
-### 2. Backend
-
-```bash
-python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env              # Fill in your API keys
-cd backend
-python -m uvicorn main:app --reload
-# API docs → http://localhost:8000/docs
-```
-
-### 3. Frontend
-
-```bash
-# Open frontend/index.html in browser, or:
-cd frontend && python3 -m http.server 3000
-# Dashboard → http://localhost:3000
-```
-
-### 4. Or use Make
-
-```bash
-make install   # install all dependencies
-make run       # start the FastAPI server
-make test      # run pytest
-make deploy    # deploy to Vercel
-```
+Cost estimate: ~$0.15 per event-hour. All functions have rule-based fallbacks.
 
 ---
 
@@ -137,88 +132,37 @@ make deploy    # deploy to Vercel
 ```
 eye-of-horus-sparks/
 ├── backend/
-│   ├── main.py              # FastAPI entry point
-│   ├── config.py            # Environment + app config
-│   ├── iris/                # Real-time signal monitoring
-│   │   ├── monitor.py       # Signal aggregation
-│   │   ├── signals.py       # API ingestion (Twitter, Weather, Ticketing)
-│   │   ├── scorer.py        # Risk scoring engine
-│   │   └── models.py        # Pydantic models
-│   ├── oracle/              # Swarm simulation + Claude
-│   │   ├── swarm.py         # 10k-agent physics engine
-│   │   ├── agents.py        # Agent archetype definitions
-│   │   ├── scenarios.py     # Scenario config + backtest runner
-│   │   └── claude_integration.py  # 4 Claude AI functions
-│   ├── sparks/              # Entertainment vertical
-│   │   ├── entertainment.py # Safety/Revenue/Experience scoring
-│   │   ├── venues.py        # Venue + event models
-│   │   └── signals.py       # Entertainment signal definitions
-│   └── tests/               # Pytest test suite
+│   ├── iris/          # Real-time monitoring (Iris module)
+│   ├── oracle/        # Swarm simulation + Claude (Oracle module)
+│   ├── sparks/        # Entertainment vertical (Sparks module)
+│   ├── scrapers/      # Crawl4AI research scrapers
+│   ├── tests/         # pytest test suite
+│   ├── main.py        # FastAPI entrypoint
+│   └── config.py      # Settings (pydantic-settings)
 ├── frontend/
-│   ├── index.html           # Dashboard (Wedjat design system)
-│   ├── css/style.css        # Bone/Graphite design tokens
-│   └── js/                  # Dashboard + Oracle + Logo JS
+│   ├── css/style.css  # Design system
+│   ├── js/            # Dashboard + simulator JS
+│   └── index.html
 ├── data/
-│   ├── backtest_events.json # Astroworld · Coachella · Super Bowl
+│   ├── backtest_events_complete.json
 │   ├── agent_archetypes.json
 │   └── signal_sources.json
-└── docs/                    # Architecture · API · Brand · Design
+├── docs/              # Architecture, API, Claude integration docs
+├── .env.example
+├── Makefile
+└── requirements.txt
 ```
 
 ---
 
-## API Endpoints
+## Built at Cerebral Valley Hackathon
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/health` | Service health check |
-| `GET` | `/api/iris/status` | Current risk score + signals |
-| `POST` | `/api/iris/interpret` | Claude signal interpretation |
-| `GET` | `/api/oracle/scenarios` | Available simulation scenarios |
-| `POST` | `/api/oracle/simulate` | Run swarm simulation |
-| `POST` | `/api/oracle/suggest-scenarios` | Claude what-if suggestions |
-| `GET` | `/api/sparks/events` | Event list |
-| `GET` | `/api/sparks/events/{id}/risk-profile` | Entertainment risk profile |
-| `POST` | `/api/backtest/run` | Run historical backtest |
+Built during the [Cerebral Valley Hackathon](https://cerebralvalley.ai), April 21–26, 2025.
 
-See [docs/API.md](docs/API.md) for full documentation with request/response examples.
+- **Demo**: [eye-of-horus-sparks.vercel.app](https://eye-of-horus-sparks.vercel.app) *(live during hackathon)*
+- **Docs**: [/docs](docs/)
+- **Issues**: [GitHub Issues](https://github.com/psp5288/eye-of-horus-sparks/issues)
 
 ---
 
-## Tech Stack
-
-| Layer | Technology | Reason |
-|-------|-----------|--------|
-| Backend | FastAPI 0.104 | Async, auto-docs, Pydantic |
-| Simulation | NumPy 1.26 + custom engine | Vectorized 10k-agent physics |
-| AI | Claude Opus 4.7 | Best reasoning, function-calling |
-| Sentiment | VADER (local) | No extra API cost |
-| Frontend | Vanilla JS + Chart.js | No build step, fast load |
-| Deployment | Vercel (Mangum adapter) | Free tier, serverless |
-| APIs | Twitter v2 · OWM · Ticketmaster | All free tier |
-
----
-
-## Day-by-Day Build Plan
-
-| Day | Date | Goal |
-|-----|------|------|
-| 1 | Apr 21 | Iris live — Twitter + Weather signals flowing |
-| 2 | Apr 22 | Oracle running — 10k agents, evacuation prediction |
-| 3 | Apr 23 | Claude wired — all 4 integration points live |
-| 4 | Apr 24 | Backtesting complete — 3 events, 93%+ accuracy |
-| 5 | Apr 25 | Frontend polished — demo-ready dashboard |
-| 6 | Apr 26 | Ship it 🏆 |
-
----
-
-## Team
-
-Built solo at **Cerebral Valley Hackathon** · April 2025
-Contact: patelparin2005@gmail.com
-
----
-
-## License
-
-MIT
+*Named after the Wedjat — the ancient Egyptian symbol of protection, royal power, and good health. The eye that watches so crowds stay safe.*

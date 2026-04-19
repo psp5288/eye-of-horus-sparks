@@ -2,378 +2,262 @@
 
 Base URL: `http://localhost:8000` (local) | `https://eye-of-horus-sparks.vercel.app` (prod)
 
-All responses are JSON. All endpoints require `Content-Type: application/json` for POST requests.
+All responses are JSON. All errors follow `{"detail": "message"}`.
 
 ---
 
-## Health
+## GET /api/health
 
-### `GET /api/health`
+Health check. Returns app info and status.
 
-Returns service health status.
-
-**Response**:
+**Response 200**
 ```json
 {
-  "status": "healthy",
+  "status": "ok",
   "app": "Eye of Horus: Sparks",
   "version": "1.0.0",
-  "modules": {
-    "iris": "operational",
-    "oracle": "operational",
-    "sparks": "operational"
-  }
+  "vertical": "sparks",
+  "claude_configured": true,
+  "timestamp": "2025-04-21T09:00:00Z"
 }
 ```
 
 ---
 
-## Iris — Real-Time Monitoring
+## GET /api/iris/live-signals
 
-### `GET /api/iris/status`
+Returns the current aggregated signal bundle for a given event.
 
-Returns the current composite risk score and signal breakdown.
+**Query Parameters**
 
-**Query Parameters**:
-- `event_id` (optional): Filter by event. Defaults to active event.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `event_id` | string | yes | Event identifier (e.g. `coachella_2023`) |
 
-**Response**:
+**Response 200**
 ```json
 {
-  "event_id": "coachella_2025",
-  "timestamp": "2025-04-21T20:00:00Z",
-  "risk_score": 0.42,
-  "risk_level": "MODERATE",
-  "confidence": 0.78,
+  "event_id": "coachella_2023",
+  "timestamp": "2025-04-21T09:00:00Z",
   "signals": {
-    "twitter_sentiment": {
-      "score": 0.35,
-      "tweet_count": 1247,
-      "sample_text": "line is getting crazy at the main stage",
-      "trend": "increasing"
+    "twitter": {
+      "sentiment_score": 0.35,
+      "sample_text": "long lines at north stage but vibe is incredible",
+      "tweet_volume": 12400
     },
     "weather": {
-      "score": 0.15,
-      "conditions": "Clear, 72°F, 8mph wind",
-      "risk_factors": []
+      "temperature_f": 87,
+      "humidity_pct": 22,
+      "conditions": "Partly cloudy",
+      "risk_score": 0.18
     },
     "crowd_density": {
-      "score": 0.65,
-      "estimated_attendance": 85000,
-      "capacity": 100000,
-      "density_per_sqm": 2.1
+      "density_score": 0.72,
+      "density_per_sqm": 2.8,
+      "hotspots": ["sahara_stage", "main_stage_pit"]
     },
     "ticket_velocity": {
-      "score": 0.52,
-      "resale_spike": true,
-      "walkup_estimate": 3200
+      "velocity_score": 0.55,
+      "resale_spike": false,
+      "resale_premium_pct": 15
     }
   },
-  "alert": null,
-  "recommendations": []
-}
-```
-
-**Risk Levels**: `LOW` (0–0.3) | `MODERATE` (0.3–0.6) | `HIGH` (0.6–0.8) | `CRITICAL` (0.8–1.0)
-
----
-
-### `GET /api/iris/signals`
-
-Returns the raw signal feed for the last N minutes.
-
-**Query Parameters**:
-- `minutes` (int, default: 60): How far back to fetch
-- `event_id` (optional): Event filter
-
-**Response**:
-```json
-{
-  "event_id": "coachella_2025",
-  "window_minutes": 60,
-  "signals": [
-    {
-      "timestamp": "2025-04-21T20:00:00Z",
-      "source": "twitter",
-      "raw_score": 0.35,
-      "data": {...}
-    }
-  ]
-}
-```
-
----
-
-### `POST /api/iris/interpret`
-
-Ask Claude to interpret the current signals and produce a natural language alert.
-
-**Request**:
-```json
-{
-  "event_id": "coachella_2025",
-  "force_refresh": false
-}
-```
-
-**Response**:
-```json
-{
-  "primary_risk": "crowd_density",
-  "alert": "Main stage area is approaching critical density (85% capacity). Twitter shows increasing urgency in crowd movement posts. Recommend activating secondary viewing areas and crowd flow staff.",
-  "confidence_note": "High confidence — weather clear, 3 concordant signals.",
-  "generated_at": "2025-04-21T20:01:15Z",
-  "cached": false
-}
-```
-
----
-
-## Oracle — Swarm Simulation
-
-### `GET /api/oracle/scenarios`
-
-Returns the list of pre-built and saved scenarios.
-
-**Response**:
-```json
-{
-  "built_in": [
-    {
-      "id": "concert_general_admission",
-      "name": "Concert: General Admission",
-      "description": "High-energy GA floor, 10k–25k capacity",
-      "incident_types": ["surge", "medical", "weather", "evacuation"]
-    },
-    {
-      "id": "festival_multi_stage",
-      "name": "Festival: Multi-Stage",
-      "description": "Large outdoor festival with multiple stages",
-      "incident_types": ["surge", "fire", "weather", "crowd_crush"]
-    },
-    {
-      "id": "stadium_sports",
-      "name": "Stadium: Sports Event",
-      "description": "Seated stadium, 50k–80k capacity",
-      "incident_types": ["evacuation", "fight", "medical", "fire"]
-    }
-  ],
-  "saved": []
-}
-```
-
----
-
-### `POST /api/oracle/simulate`
-
-Run a swarm simulation. This is the core Oracle endpoint.
-
-**Request**:
-```json
-{
-  "scenario_id": "concert_general_admission",
-  "event_config": {
-    "venue_name": "The Gorge Amphitheatre",
-    "capacity": 20000,
-    "current_attendance": 18000,
-    "crowd_profile": {
-      "casual": 0.40,
-      "friends_group": 0.30,
-      "influencer": 0.10,
-      "staff": 0.15,
-      "non_compliant": 0.05
-    }
-  },
-  "incident": {
-    "type": "crowd_surge",
-    "location": "main_stage_pit",
-    "trigger_time_seconds": 180,
-    "severity": "high"
-  },
-  "simulation_config": {
-    "agent_count": 10000,
-    "duration_seconds": 600,
-    "use_claude_reasoning": true
+  "composite_risk": 0.42,
+  "risk_level": "MODERATE",
+  "confidence": 0.81,
+  "claude_interpretation": {
+    "sentiment_label": "rising",
+    "primary_risk": "localized_crowd_pressure",
+    "alert": "Minor crowd pressure at Sahara stage. Monitor density near barrier."
   }
 }
 ```
 
-**Response**:
+**Error 404**
+```json
+{"detail": "Event 'unknown_event' not found"}
+```
+
+---
+
+## POST /api/oracle/simulate
+
+Run a swarm simulation for a given event and scenario.
+
+**Request Body**
 ```json
 {
-  "simulation_id": "sim_abc123",
-  "scenario": "concert_general_admission",
-  "status": "completed",
-  "duration_ms": 12400,
-  "results": {
-    "evacuation_time_seconds": 847,
-    "evacuation_time_formatted": "14 min 7 sec",
-    "target_met": false,
-    "bottlenecks": [
-      {"location": "exit_gate_2", "peak_pressure": 8.2, "time_seconds": 210},
-      {"location": "main_entrance", "peak_pressure": 6.1, "time_seconds": 195}
-    ],
-    "crowd_sentiment_trajectory": [0.6, 0.55, 0.4, 0.2, 0.15, 0.12],
-    "peak_density": 9.1,
-    "estimated_injury_risk": 0.12,
-    "agent_outcomes": {
-      "safely_evacuated": 9240,
-      "delayed": 620,
-      "at_risk": 140
+  "event_id": "coachella_2023",
+  "scenario": {
+    "incident_type": "crowd_surge",
+    "trigger_time_s": 5400,
+    "severity": "high",
+    "parameters": {
+      "surge_multiplier": 2.0,
+      "origin": "sahara_stage"
     }
+  },
+  "num_agents": 10000,
+  "include_claude": true
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `event_id` | string | required | Event to simulate |
+| `scenario` | object | required | Incident scenario |
+| `num_agents` | int | 10000 | Agent population size |
+| `include_claude` | bool | true | Use Claude for agent behavior |
+
+**Response 200**
+```json
+{
+  "event_id": "coachella_2023",
+  "scenario_run_id": "sim_abc123",
+  "simulation_time_s": 1.24,
+  "predictions": {
+    "evacuation_time_seconds": 480,
+    "peak_density": 0.78,
+    "estimated_injury_risk": 0.12,
+    "bottlenecks": [
+      {
+        "location": "sahara_stage_exit",
+        "peak_pressure": 8.4,
+        "risk_score": 7.2
+      }
+    ],
+    "agent_outcomes": {
+      "safely_evacuated": 9840,
+      "at_risk": 160,
+      "injured": 18
+    },
+    "crowd_sentiment_trajectory": [0.35, 0.42, 0.61, 0.74, 0.68, 0.55]
+  },
+  "scores": {
+    "Safety": 72,
+    "Revenue": 68,
+    "Experience": 75,
+    "Bottleneck": 34
   },
   "recommendations": [
     {
       "priority": 1,
-      "action": "Open emergency gates 3 and 4 immediately",
-      "location": "North perimeter",
-      "timing": "At incident detection (T+0s)",
-      "expected_impact": "Reduces evacuation time by ~3 minutes"
-    }
-  ],
-  "visualization_data": {
-    "agent_positions_by_tick": "...(compressed)"
-  }
-}
-```
-
----
-
-### `POST /api/oracle/suggest-scenarios`
-
-Ask Claude to generate what-if scenarios for an event.
-
-**Request**:
-```json
-{
-  "event_config": {
-    "venue_name": "Madison Square Garden",
-    "capacity": 20000,
-    "event_type": "concert",
-    "artist": "Taylor Swift",
-    "demographics": "18-35, mostly female, high social media engagement"
-  }
-}
-```
-
-**Response**:
-```json
-{
-  "scenarios": [
-    {
-      "name": "Social Media Surge",
-      "description": "Influencer posts go viral mid-show, causing unexpected crowd movement toward stage",
-      "incident_type": "crowd_surge",
-      "trigger_time": 3600,
-      "severity": "medium",
-      "parameters": {"social_multiplier": 2.5}
+      "action": "Deploy 4 staff to Sahara stage exit immediately",
+      "location": "sahara_stage_exit",
+      "timing": "T+0s",
+      "expected_impact": "Reduce evacuation time by ~25%"
     }
   ]
 }
 ```
 
+**Error 422**
+```json
+{"detail": "Invalid scenario: incident_type must be one of crowd_surge|medical|fire|weather|evacuation|fight"}
+```
+
 ---
 
-## Sparks — Entertainment Events
+## GET /api/sparks/events
 
-### `GET /api/sparks/events`
+List all configured events with basic risk profiles.
 
-Returns configured events.
-
-**Response**:
+**Response 200**
 ```json
 {
   "events": [
     {
-      "id": "coachella_2025_w1",
-      "name": "Coachella 2025 - Weekend 1",
+      "event_id": "coachella_2023",
+      "event_name": "Coachella Valley Music Festival 2023",
+      "date": "2023-04-14",
       "venue": "Empire Polo Club",
-      "capacity": 125000,
-      "date": "2025-04-18",
-      "status": "active"
+      "event_type": "festival",
+      "composite_risk": 0.42,
+      "risk_level": "MODERATE",
+      "scores": {
+        "Safety": 72,
+        "Revenue": 68,
+        "Experience": 75,
+        "Bottleneck": 34
+      }
     }
-  ]
+  ],
+  "total": 3
 }
 ```
 
 ---
 
-### `GET /api/sparks/events/{event_id}/risk-profile`
+## GET /api/sparks/events/{event_id}
 
-Returns entertainment-specific risk profile for an event.
+Full risk profile for a single event.
 
-**Response**:
+**Path Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `event_id` | string | Event identifier |
+
+**Response 200** — includes all fields from `/events` plus:
 ```json
 {
-  "event_id": "coachella_2025_w1",
-  "entertainment_score": 0.72,
   "factors": {
     "artist_hype_score": 0.85,
-    "fan_compliance_estimate": 0.70,
-    "alcohol_policy_risk": 0.45,
-    "historical_incident_rate": 0.12
+    "fan_compliance_estimate": 0.65,
+    "alcohol_policy_risk": 0.55,
+    "historical_incident_rate": 0.18
   },
-  "comparable_events": ["coachella_2023", "lollapalooza_2022"],
-  "risk_adjusted_capacity": 108000
-}
-```
-
----
-
-## Backtesting
-
-### `POST /api/backtest/run`
-
-Run backtesting against historical event data.
-
-**Request**:
-```json
-{
-  "event_ids": ["astroworld_2021", "coachella_2023", "superbowl_lviii"],
-  "simulation_config": {
-    "agent_count": 10000,
-    "use_claude_reasoning": false
+  "comparable_events": ["lollapalooza_2022", "astroworld_2024"],
+  "risk_adjusted_capacity": 118750,
+  "agent_archetypes": {
+    "casual": 0.40,
+    "friends_group": 0.28,
+    "influencer": 0.15,
+    "staff": 0.12,
+    "non_compliant": 0.05
   }
 }
 ```
 
-**Response**:
+**Error 404**
 ```json
-{
-  "backtest_id": "bt_xyz789",
-  "results": [
-    {
-      "event_id": "astroworld_2021",
-      "predicted_risk_score": 0.89,
-      "actual_risk_level": "CRITICAL",
-      "accuracy": 0.94,
-      "predicted_evacuation_time": 1240,
-      "actual_casualties": 10,
-      "model_assessment": "correctly flagged critical density"
-    }
-  ],
-  "overall_accuracy": 0.926,
-  "target_met": true
-}
+{"detail": "Event 'unknown' not found"}
 ```
 
 ---
 
-## Error Responses
+## GET /api/sparks/backtest
 
-All errors follow this format:
+Returns backtesting accuracy results for all three validation events.
 
+**Response 200**
 ```json
 {
-  "error": "simulation_timeout",
-  "message": "Simulation exceeded 60s limit. Try reducing agent_count.",
-  "code": 408
+  "overall_accuracy": 0.927,
+  "target": 0.92,
+  "target_met": true,
+  "events": [
+    {
+      "event_id": "astroworld_2024",
+      "risk_level_correct": true,
+      "evacuation_time_error_pct": 7.1,
+      "bottleneck_locations_correct": true,
+      "accuracy": 0.94
+    },
+    {
+      "event_id": "coachella_2023",
+      "risk_level_correct": true,
+      "evacuation_time_error_pct": 5.9,
+      "bottleneck_locations_correct": true,
+      "accuracy": 0.91
+    },
+    {
+      "event_id": "super_bowl_58",
+      "risk_level_correct": true,
+      "evacuation_time_error_pct": 5.8,
+      "bottleneck_locations_correct": true,
+      "accuracy": 0.93
+    }
+  ]
 }
 ```
-
-Common error codes:
-- `400` — Invalid request parameters
-- `404` — Event or scenario not found
-- `408` — Simulation timeout
-- `429` — Claude API rate limit hit
-- `500` — Internal server error

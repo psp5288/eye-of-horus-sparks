@@ -2,26 +2,43 @@
 
 ## Prerequisites
 
-- Python 3.11+
-- Node.js 18+ (optional, for frontend tooling)
-- Git
+| Tool | Version | Check |
+|------|---------|-------|
+| Python | 3.11+ | `python --version` |
+| pip | latest | `pip --version` |
+| Node.js | 18+ (optional, for npm scripts) | `node --version` |
+| Git | any | `git --version` |
 
-## 1. Clone & Structure
+---
+
+## 1. Clone
 
 ```bash
-git clone https://github.com/patelparin2005/eye-of-horus-sparks.git
+git clone https://github.com/psp5288/eye-of-horus-sparks.git
 cd eye-of-horus-sparks
 ```
 
-## 2. Python Environment
+---
+
+## 2. Install Backend
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Create virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## 3. Environment Variables
+Or use Make:
+```bash
+make install-backend
+```
+
+---
+
+## 3. Configure Environment
 
 ```bash
 cp .env.example .env
@@ -29,62 +46,163 @@ cp .env.example .env
 
 Edit `.env` and fill in your API keys:
 
-| Variable | Where to Get |
-|----------|-------------|
-| `CLAUDE_API_KEY` | https://console.anthropic.com |
-| `TWITTER_BEARER_TOKEN` | https://developer.twitter.com |
-| `OPENWEATHER_API_KEY` | https://openweathermap.org/api |
-| `TICKETMASTER_KEY` | https://developer.ticketmaster.com |
+```bash
+# Required for live signals
+TWITTER_BEARER_TOKEN=Bearer your_token_here
+WEATHER_API_KEY=your_openweathermap_key
 
-## 4. Run Backend
+# Required for Claude AI features
+CLAUDE_API_KEY=sk-ant-your_key_here
+
+# Optional
+TICKETMASTER_API_KEY=your_key
+```
+
+**Without API keys**: The app runs in fallback mode — all Claude functions use rule-based logic, signals return mock data. Useful for frontend development.
+
+---
+
+## 4. Verify API Connections
+
+```bash
+# Test Claude
+python -c "from anthropic import Anthropic; c = Anthropic(); print('✓ Anthropic SDK')"
+
+# Test FastAPI imports
+python -c "from fastapi import FastAPI; print('✓ FastAPI')"
+
+# Test NumPy (simulation)
+python -c "import numpy; print('✓ NumPy', numpy.__version__)"
+```
+
+---
+
+## 5. Run Backend
 
 ```bash
 cd backend
-python -m uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
-Visit:
-- Dashboard: http://localhost:8000
-- API docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/api/health
-
-## 5. Run Tests
-
+Or:
 ```bash
-cd backend
-python -m pytest tests/ -v
+make run
 ```
 
-## 6. Frontend (Development)
+API will be live at `http://localhost:8000`.
 
-The frontend is static HTML/CSS/JS. Just open `frontend/index.html` in a browser,
-or serve it with Python:
+Swagger docs: `http://localhost:8000/docs`
+
+---
+
+## 6. Run Frontend
 
 ```bash
 cd frontend
-python3 -m http.server 3000
-# Open http://localhost:3000
+python -m http.server 3000
 ```
 
-The frontend JS points to `http://localhost:8000` for API calls. Change `API_BASE_URL`
-in `frontend/js/api.js` for production.
+Or:
+```bash
+make run-frontend
+```
 
-## 7. Vercel Deployment
+Dashboard at `http://localhost:3000`.
+
+---
+
+## 7. Run Both (Parallel)
 
 ```bash
-npm install -g vercel
-vercel login
-vercel
+make run-all
 ```
 
-Set environment variables in Vercel dashboard under Project Settings > Environment Variables.
+---
+
+## 8. Run Tests
+
+```bash
+# All tests
+make test
+
+# Individual modules
+make test-iris
+make test-oracle
+make test-sparks
+
+# With coverage
+make test-cov
+```
+
+---
+
+## 9. Run Backtest Verification
+
+```bash
+make backtest
+```
+
+This runs the 3-event backtest and reports accuracy. Should show ≥92.7%.
+
+---
+
+## 10. Deploy to Vercel
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy preview
+make deploy-preview
+
+# Deploy production
+make deploy
+```
+
+Ensure `CLAUDE_API_KEY` and other secrets are set in Vercel environment variables:
+```
+vercel env add CLAUDE_API_KEY
+```
+
+---
+
+## Makefile Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Install all dependencies |
+| `make run` | Start FastAPI (port 8000) |
+| `make run-frontend` | Start static server (port 3000) |
+| `make run-all` | Both in parallel |
+| `make test` | Run pytest |
+| `make lint` | Run ruff linter |
+| `make format` | Run ruff formatter |
+| `make health` | Test /api/health endpoint |
+| `make backtest` | Run backtest validation |
+| `make clean` | Remove __pycache__ |
+| `make deploy` | Deploy to Vercel |
+
+---
 
 ## Troubleshooting
 
-**`ModuleNotFoundError`**: Make sure you're in the activated venv and ran `pip install -r requirements.txt`.
+**`ModuleNotFoundError: crawl4ai`**
+```bash
+pip install crawl4ai --break-system-packages  # Homebrew Python
+python -m playwright install chromium
+```
 
-**`Port 8000 already in use`**: Run `lsof -i :8000 | kill -9 PID` or change port in the uvicorn command.
+**`CLAUDE_API_KEY not set`**
+The app will still run — Claude functions fall back to rule-based logic. Add the key to `.env` when ready.
 
-**`CLAUDE_API_KEY not set`**: Check your `.env` file exists and has the correct key name.
+**Port 8000 already in use**
+```bash
+lsof -i :8000 | grep LISTEN
+kill -9 <PID>
+```
 
-**Twitter API 403**: Ensure you have a Twitter Developer account with v2 API access (free tier works).
+**`git push` rejected (divergent branches)**
+```bash
+git pull origin main --allow-unrelated-histories --no-rebase --no-edit
+git push origin main
+```
