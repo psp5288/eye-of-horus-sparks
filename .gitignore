@@ -12,6 +12,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.venv/
 *.egg-info/
 dist/
 build/
@@ -20,34 +21,42 @@ build/
 .ruff_cache/
 htmlcov/
 .coverage
-*.cover
+coverage.xml
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Vercel
-.vercel/
+.npm
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-.DS_Store
+*.sublime-project
+*.sublime-workspace
 
-# Data (large files, generated outputs)
-data/outputs/
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project
+*.log
+logs/
+.vercel/
+vercel.json.bak
 *.db
 *.sqlite
 
-# Logs
-logs/
-*.log
+# Crawl4AI cache
+.crawl4ai/
 
-# Secrets
-*.pem
-*.key
-credentials.json
+# Keep design assets
+!frontend/assets/
