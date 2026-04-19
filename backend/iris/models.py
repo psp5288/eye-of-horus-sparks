@@ -1,9 +1,10 @@
 """Pydantic models for the Iris monitoring module."""
 
-from pydantic import BaseModel, Field
-from enum import Enum
 from datetime import datetime
-from typing import Optional
+from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class RiskLevel(str, Enum):
@@ -14,7 +15,6 @@ class RiskLevel(str, Enum):
 
 
 def score_to_risk_level(score: float) -> RiskLevel:
-    """Map a 0–1 composite score to a RiskLevel enum."""
     if score < 0.30:
         return RiskLevel.LOW
     elif score < 0.60:
@@ -24,60 +24,55 @@ def score_to_risk_level(score: float) -> RiskLevel:
     return RiskLevel.CRITICAL
 
 
-class TwitterSignalData(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
-    tweet_count: int = 0
+class TwitterSignal(BaseModel):
+    sentiment_score: float = Field(0.5, ge=0.0, le=1.0, description="0=negative, 1=positive")
     sample_text: str = ""
-    trend: str = "stable"  # "increasing" | "stable" | "decreasing"
+    tweet_volume: int = 0
+    raw_score: float = 0.5
 
 
-class WeatherSignalData(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
-    conditions: str = "Unknown"
-    temperature_f: float = 70.0
+class WeatherSignal(BaseModel):
+    temperature_f: float = 72.0
+    humidity_pct: float = 50.0
+    conditions: str = "Clear"
     wind_mph: float = 0.0
-    risk_factors: list[str] = []
+    risk_score: float = Field(0.1, ge=0.0, le=1.0)
 
 
-class CrowdDensityData(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
-    estimated_attendance: int = 0
-    capacity: int = 0
-    density_per_sqm: float = 0.0
+class CrowdDensitySignal(BaseModel):
+    density_score: float = Field(0.5, ge=0.0, le=1.0)
+    density_per_sqm: float = 2.0
+    hotspots: List[str] = []
 
 
-class TicketVelocityData(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
+class TicketingSignal(BaseModel):
+    velocity_score: float = Field(0.4, ge=0.0, le=1.0)
     resale_spike: bool = False
-    walkup_estimate: int = 0
+    resale_premium_pct: float = 0.0
 
 
 class SignalBundle(BaseModel):
-    twitter_sentiment: TwitterSignalData = TwitterSignalData(score=0.0)
-    weather: WeatherSignalData = WeatherSignalData(score=0.0)
-    crowd_density: CrowdDensityData = CrowdDensityData(score=0.0)
-    ticket_velocity: TicketVelocityData = TicketVelocityData(score=0.0)
-
-
-class IrisStatusResponse(BaseModel):
     event_id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    risk_score: float = Field(ge=0.0, le=1.0)
-    risk_level: RiskLevel = RiskLevel.LOW
-    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
-    signals: SignalBundle = Field(default_factory=SignalBundle)
-    alert: Optional[str] = None
-    recommendations: list[str] = []
-
-
-class SignalDataPoint(BaseModel):
     timestamp: datetime
-    source: str
-    raw_score: float
-    data: dict = {}
+    twitter: TwitterSignal = TwitterSignal()
+    weather: WeatherSignal = WeatherSignal()
+    crowd_density: CrowdDensitySignal = CrowdDensitySignal()
+    ticket_velocity: TicketingSignal = TicketingSignal()
 
 
-class SignalFeedResponse(BaseModel):
+class RiskScore(BaseModel):
+    score: float = Field(..., ge=0.0, le=1.0, description="Composite risk 0–1")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in score 0–1")
+    level: RiskLevel
+    breakdown: dict = {}
+
+
+class EventData(BaseModel):
     event_id: str
-    window_minutes: int
-    signals: list[SignalDataPoint] = []
+    event_name: str
+    date: str
+    venue: str
+    location: str
+    capacity: int
+    event_type: str = "festival"
+    expected_attendance: Optional[int] = None

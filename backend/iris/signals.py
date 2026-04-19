@@ -1,225 +1,180 @@
 """Signal ingestion stubs for Twitter, Weather, and Ticketing APIs."""
 
 import asyncio
+import logging
 import random
-from datetime import datetime
 from typing import Optional
 
-import httpx
+from iris.models import TwitterSignal, WeatherSignal, CrowdDensitySignal, TicketingSignal
 
-from config import get_settings
-from iris.models import (
-    TwitterSignalData,
-    WeatherSignalData,
-    CrowdDensityData,
-    TicketVelocityData,
-)
+logger = logging.getLogger(__name__)
 
-settings = get_settings()
+# Mock data keyed by event_id for demo/dev mode
+_MOCK_SIGNALS = {
+    "astroworld_2024": {
+        "twitter": TwitterSignal(sentiment_score=0.78, sample_text="crowd pushing near south stage", tweet_volume=8400, raw_score=0.78),
+        "weather": WeatherSignal(temperature_f=68, humidity_pct=55, conditions="Clear", wind_mph=8, risk_score=0.05),
+        "density": CrowdDensitySignal(density_score=0.87, density_per_sqm=5.8, hotspots=["main_stage", "south_stage"]),
+        "ticketing": TicketingSignal(velocity_score=0.85, resale_spike=True, resale_premium_pct=45),
+    },
+    "coachella_2023": {
+        "twitter": TwitterSignal(sentiment_score=0.35, sample_text="long lines at north stage but vibe is incredible", tweet_volume=12400, raw_score=0.35),
+        "weather": WeatherSignal(temperature_f=87, humidity_pct=22, conditions="Partly cloudy", wind_mph=12, risk_score=0.18),
+        "density": CrowdDensitySignal(density_score=0.72, density_per_sqm=2.8, hotspots=["sahara_stage", "main_stage_pit"]),
+        "ticketing": TicketingSignal(velocity_score=0.55, resale_spike=False, resale_premium_pct=15),
+    },
+    "super_bowl_58": {
+        "twitter": TwitterSignal(sentiment_score=0.20, sample_text="incredible atmosphere, staff everywhere, super organized", tweet_volume=24000, raw_score=0.20),
+        "weather": WeatherSignal(temperature_f=72, humidity_pct=30, conditions="Indoor, climate controlled", wind_mph=0, risk_score=0.08),
+        "density": CrowdDensitySignal(density_score=0.55, density_per_sqm=1.8, hotspots=[]),
+        "ticketing": TicketingSignal(velocity_score=0.40, resale_spike=False, resale_premium_pct=80),
+    },
+}
 
 
-class TwitterSignalFetcher:
-    """Fetches recent tweets for an event and computes sentiment score."""
+async def fetch_twitter_signal(event_id: str) -> TwitterSignal:
+    """
+    Fetch Twitter sentiment signal for an event.
 
-    BASE_URL = "https://api.twitter.com/2/tweets/search/recent"
+    Uses Tweepy + VADER for real-time scoring, or mock data in dev mode.
 
-    def __init__(self, event_id: str, query_terms: Optional[list[str]] = None):
-        self.event_id = event_id
-        self.query_terms = query_terms or [event_id, "concert", "crowd"]
+    Parameters
+    ----------
+    event_id : str
+        Event identifier.
 
-    async def fetch(self) -> TwitterSignalData:
-        """Fetch tweets and return sentiment score.
+    Returns
+    -------
+    TwitterSignal
+        Sentiment score (0=negative, 1=positive), sample tweet, volume.
+    """
+    mock = _MOCK_SIGNALS.get(event_id, {}).get("twitter")
+    if mock:
+        return mock
 
-        Falls back to simulated data when API key is not configured.
-        """
-        if not settings.twitter_bearer_token:
-            return self._simulate()
+    # TODO (April 21): implement Tweepy v2 + VADER live scoring
+    # from tweepy import Client
+    # from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+    return TwitterSignal(sentiment_score=0.5, sample_text="No data", tweet_volume=0)
 
-        query = " OR ".join(self.query_terms) + " lang:en -is:retweet"
-        params = {"query": query, "max_results": 100, "tweet.fields": "text,created_at"}
-        headers = {"Authorization": f"Bearer {settings.twitter_bearer_token}"}
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(self.BASE_URL, params=params, headers=headers)
-                resp.raise_for_status()
-                data = resp.json()
-            return self._parse_response(data)
-        except Exception:
-            return self._simulate()
+async def fetch_weather_signal(event_id: str) -> WeatherSignal:
+    """
+    Fetch weather signal from OpenWeatherMap for the event venue.
 
-    def _parse_response(self, data: dict) -> TwitterSignalData:
-        """Parse Twitter API response and compute VADER sentiment."""
+    Parameters
+    ----------
+    event_id : str
+        Event identifier (used to look up venue lat/lon).
+
+    Returns
+    -------
+    WeatherSignal
+        Temperature, humidity, conditions, risk score.
+    """
+    mock = _MOCK_SIGNALS.get(event_id, {}).get("weather")
+    if mock:
+        return mock
+
+    # TODO (April 21): implement OpenWeatherMap API call
+    # import requests
+    # resp = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={key}")
+    return WeatherSignal()
+
+
+async def fetch_crowd_density_signal(event_id: str) -> CrowdDensitySignal:
+    """
+    Estimate crowd density from available data sources.
+
+    In production: ingests venue sensor data, social check-ins, or camera feeds.
+    In demo mode: returns mock data keyed by event_id.
+
+    Parameters
+    ----------
+    event_id : str
+        Event identifier.
+
+    Returns
+    -------
+    CrowdDensitySignal
+        Density score, density per sqm, hotspot zone list.
+    """
+    mock = _MOCK_SIGNALS.get(event_id, {}).get("density")
+    if mock:
+        return mock
+
+    return CrowdDensitySignal()
+
+
+async def fetch_ticketing_signal(event_id: str) -> TicketingSignal:
+    """
+    Fetch ticket velocity and resale spike data.
+
+    Parameters
+    ----------
+    event_id : str
+        Event identifier.
+
+    Returns
+    -------
+    TicketingSignal
+        Velocity score, resale spike flag, resale premium %.
+    """
+    mock = _MOCK_SIGNALS.get(event_id, {}).get("ticketing")
+    if mock:
+        return mock
+
+    # TODO (April 21): implement Ticketmaster API + resale market monitoring
+    return TicketingSignal()
+
+
+def parse_twitter_sentiment(text: str) -> float:
+    """
+    Score text sentiment with VADER (no API cost, runs locally).
+
+    Parameters
+    ----------
+    text : str
+        Raw tweet text.
+
+    Returns
+    -------
+    float
+        Compound sentiment score 0–1 (0=very negative, 1=very positive).
+    """
+    try:
         from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-        tweets = data.get("data", [])
-        if not tweets:
-            return TwitterSignalData(score=0.5, tweet_count=0)
-
         analyzer = SentimentIntensityAnalyzer()
-        scores = []
-        for tweet in tweets:
-            text = tweet.get("text", "")
-            vs = analyzer.polarity_scores(text)
-            # Invert compound: high negative sentiment = high risk score
-            risk = (1.0 - vs["compound"]) / 2.0
-            scores.append(risk)
-
-        avg_score = sum(scores) / len(scores)
-        sample = tweets[0].get("text", "") if tweets else ""
-        trend = "increasing" if avg_score > 0.55 else "stable"
-
-        return TwitterSignalData(
-            score=round(avg_score, 3),
-            tweet_count=len(tweets),
-            sample_text=sample[:200],
-            trend=trend,
-        )
-
-    def _simulate(self) -> TwitterSignalData:
-        """Return plausible simulated data when API is unavailable."""
-        score = round(random.uniform(0.2, 0.7), 3)
-        return TwitterSignalData(
-            score=score,
-            tweet_count=random.randint(50, 800),
-            sample_text="[simulated] crowd is getting really packed near the stage",
-            trend="increasing" if score > 0.5 else "stable",
-        )
+        compound = analyzer.polarity_scores(text)["compound"]
+        return (compound + 1) / 2  # map -1..1 to 0..1
+    except ImportError:
+        return 0.5
 
 
-class WeatherSignalFetcher:
-    """Fetches current weather for a venue and computes weather risk score."""
+def parse_weather_risk(temp_f: float, humidity: float, conditions: str) -> float:
+    """
+    Convert weather conditions into a risk score.
 
-    BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+    High temperature + high humidity = higher medical incident probability.
 
-    def __init__(self, lat: float = 34.0, lon: float = -118.0):
-        self.lat = lat
-        self.lon = lon
+    Parameters
+    ----------
+    temp_f : float
+    humidity : float
+    conditions : str
 
-    async def fetch(self) -> WeatherSignalData:
-        """Fetch weather data. Falls back to simulation when API key missing."""
-        if not settings.openweather_api_key:
-            return self._simulate()
+    Returns
+    -------
+    float
+        Weather risk score 0–1.
+    """
+    heat_score = max(0.0, (temp_f - 75) / 40)       # 75°F = 0 risk, 115°F = 1.0
+    humidity_score = max(0.0, (humidity - 40) / 60)  # 40% = 0 risk, 100% = 1.0
 
-        params = {
-            "lat": self.lat,
-            "lon": self.lon,
-            "appid": settings.openweather_api_key,
-            "units": "imperial",
-        }
+    condition_penalty = 0.0
+    if any(w in conditions.lower() for w in ["rain", "storm", "thunder", "lightning"]):
+        condition_penalty = 0.3
+    elif "heat" in conditions.lower():
+        condition_penalty = 0.2
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(self.BASE_URL, params=params)
-                resp.raise_for_status()
-                data = resp.json()
-            return self._parse_response(data)
-        except Exception:
-            return self._simulate()
-
-    def _parse_response(self, data: dict) -> WeatherSignalData:
-        """Parse OWM response and score weather risk."""
-        main = data.get("main", {})
-        wind = data.get("wind", {})
-        weather = data.get("weather", [{}])[0]
-
-        temp_f = main.get("temp", 70)
-        wind_mph = wind.get("speed", 0) * 2.237  # m/s to mph
-        description = weather.get("description", "clear")
-
-        risk_factors = []
-        score = 0.0
-
-        if temp_f > 95:
-            score += 0.3
-            risk_factors.append("extreme heat")
-        elif temp_f > 85:
-            score += 0.15
-            risk_factors.append("high heat")
-
-        if wind_mph > 30:
-            score += 0.2
-            risk_factors.append("high winds")
-
-        if "thunder" in description or "storm" in description:
-            score += 0.35
-            risk_factors.append("thunderstorm")
-        elif "rain" in description:
-            score += 0.15
-            risk_factors.append("rain")
-
-        return WeatherSignalData(
-            score=min(score, 1.0),
-            conditions=f"{description.title()}, {temp_f:.0f}°F, {wind_mph:.0f}mph wind",
-            temperature_f=temp_f,
-            wind_mph=wind_mph,
-            risk_factors=risk_factors,
-        )
-
-    def _simulate(self) -> WeatherSignalData:
-        return WeatherSignalData(
-            score=round(random.uniform(0.0, 0.3), 3),
-            conditions="Clear, 74°F, 6mph wind",
-            temperature_f=74.0,
-            wind_mph=6.0,
-            risk_factors=[],
-        )
-
-
-class CrowdDensityFetcher:
-    """Estimates crowd density from ticketing data."""
-
-    def __init__(self, event_id: str, venue_capacity: int = 20000):
-        self.event_id = event_id
-        self.venue_capacity = venue_capacity
-
-    async def fetch(self) -> CrowdDensityData:
-        """Estimate attendance from Ticketmaster or simulate."""
-        if not settings.ticketmaster_key:
-            return self._simulate()
-
-        # Ticketmaster API stub — wire up during hackathon Day 1
-        return self._simulate()
-
-    def _simulate(self) -> CrowdDensityData:
-        pct = random.uniform(0.55, 0.95)
-        attendance = int(self.venue_capacity * pct)
-        density = pct * 3.5  # rough agents/m² at capacity ~ 3.5
-
-        score = 0.0
-        if pct > 0.90:
-            score = 0.8
-        elif pct > 0.75:
-            score = 0.5
-        elif pct > 0.60:
-            score = 0.3
-        else:
-            score = 0.1
-
-        return CrowdDensityData(
-            score=round(score, 3),
-            estimated_attendance=attendance,
-            capacity=self.venue_capacity,
-            density_per_sqm=round(density, 2),
-        )
-
-
-class TicketVelocityFetcher:
-    """Monitors ticket resale velocity as a proxy for crowd mood."""
-
-    def __init__(self, event_id: str):
-        self.event_id = event_id
-
-    async def fetch(self) -> TicketVelocityData:
-        """Fetch ticket resale data or simulate."""
-        # Wire up to StubHub / Ticketmaster resale API during hackathon
-        return self._simulate()
-
-    def _simulate(self) -> TicketVelocityData:
-        resale_spike = random.random() > 0.7
-        score = round(random.uniform(0.3, 0.7) if resale_spike else random.uniform(0.1, 0.4), 3)
-        return TicketVelocityData(
-            score=score,
-            resale_spike=resale_spike,
-            walkup_estimate=random.randint(200, 2000),
-        )
+    return min(1.0, heat_score * 0.5 + humidity_score * 0.3 + condition_penalty)
