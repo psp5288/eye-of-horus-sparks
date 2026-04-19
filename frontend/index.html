@@ -1,227 +1,193 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eye of Horus: Sparks — See. Predict. Act.</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Eye of Horus: Sparks</title>
+  <meta name="description" content="AI-powered crowd intelligence for live events">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Design system -->
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ── Header rail ─────────────────────────────────────────── -->
-<header class="header">
-  <div class="header-inner">
-    <div class="header-left">
-      <!-- Animated Wedjat logo (hover to reveal wordmark) -->
-      <div class="eoh-logo" id="header-logo" data-variant="hover" style="width:40px;max-width:40px;flex:0 0 auto"></div>
-      <div class="logo-wordmark">
-        Eye of <i>Horus</i>
-        <small>Sparks</small>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="eoh-logo" id="header-logo" data-variant="hover"></div>
+      <nav class="site-nav">
+        <button class="nav-btn active" data-view="iris">Iris</button>
+        <button class="nav-btn" data-view="oracle">Oracle</button>
+        <button class="nav-btn" data-view="about">About</button>
+      </nav>
+      <div class="header-status">
+        <span class="status-dot" id="api-status-dot"></span>
+        <span class="status-label" id="api-status-label">Connecting…</span>
       </div>
     </div>
-    <div class="header-right mono">
-      <span>Event · <b id="active-event-name">Loading…</b></span>
-      <span class="badge-live">Live</span>
-    </div>
+  </header>
+
+  <!-- Severity strip -->
+  <div class="severity-strip">
+    <div class="sev-chip" data-sev="nominal" id="sev-0">L0 Nominal</div>
+    <div class="sev-chip" data-sev="watch"   id="sev-1">L1 Watch</div>
+    <div class="sev-chip" data-sev="elevated" id="sev-2">L2 Elevated</div>
+    <div class="sev-chip" data-sev="critical" id="sev-3">L3 Critical</div>
   </div>
-</header>
 
-<!-- ── Main layout ─────────────────────────────────────────── -->
-<main class="main">
+  <!-- Main content -->
+  <main id="app-root">
 
-  <!-- ── Iris Panel ── -->
-  <section class="panel panel-iris">
-    <div class="panel-header">
-      <h2>Iris <span class="subtitle">Real-Time</span></h2>
-      <button class="btn-icon mono" id="iris-refresh-btn" title="Refresh signals">↻</button>
-    </div>
-
-    <!-- Risk gauge -->
-    <div class="risk-gauge-container">
-      <canvas id="risk-gauge" width="200" height="200"></canvas>
-      <div class="gauge-center">
-        <span class="gauge-score" id="risk-score-display">—</span>
-        <span class="gauge-label" id="risk-level-display">—</span>
-      </div>
-    </div>
-
-    <!-- Signal bars -->
-    <div class="signal-bars">
-      <div class="signal-row">
-        <span class="signal-name mono">Twitter</span>
-        <div class="signal-bar-track"><div class="signal-bar" id="bar-twitter"></div></div>
-        <span class="signal-val mono" id="val-twitter">—</span>
-      </div>
-      <div class="signal-row">
-        <span class="signal-name mono">Weather</span>
-        <div class="signal-bar-track"><div class="signal-bar" id="bar-weather"></div></div>
-        <span class="signal-val mono" id="val-weather">—</span>
-      </div>
-      <div class="signal-row">
-        <span class="signal-name mono">Density</span>
-        <div class="signal-bar-track"><div class="signal-bar" id="bar-density"></div></div>
-        <span class="signal-val mono" id="val-density">—</span>
-      </div>
-      <div class="signal-row">
-        <span class="signal-name mono">Velocity</span>
-        <div class="signal-bar-track"><div class="signal-bar" id="bar-velocity"></div></div>
-        <span class="signal-val mono" id="val-velocity">—</span>
-      </div>
-    </div>
-
-    <!-- Severity indicator — maps to risk level with animated pupils -->
-    <div class="severity-row" id="severity-row">
-      <div class="sev-chip" data-sev="nominal">
-        <div class="sev-mark" id="sev-0"></div>
-        <span class="sev-lbl mono">L0 · Calm</span>
-      </div>
-      <div class="sev-chip" data-sev="watch">
-        <div class="sev-mark" id="sev-1"></div>
-        <span class="sev-lbl mono">L1 · Watch</span>
-      </div>
-      <div class="sev-chip" data-sev="elevated">
-        <div class="sev-mark" id="sev-2"></div>
-        <span class="sev-lbl mono">L2 · Elevated</span>
-      </div>
-      <div class="sev-chip" data-sev="critical">
-        <div class="sev-mark" id="sev-3"></div>
-        <span class="sev-lbl mono">L3 · Critical</span>
-      </div>
-    </div>
-
-    <!-- Alert -->
-    <div class="alert-box hidden" id="iris-alert">
-      <span class="alert-icon">⚠</span>
-      <span id="iris-alert-text"></span>
-    </div>
-
-    <!-- Claude interpret -->
-    <button class="btn btn-primary" id="interpret-btn">
-      Ask Claude to Interpret
-    </button>
-    <div class="claude-output hidden" id="claude-interpret-output"></div>
-
-    <div class="confidence-row">
-      <span class="mono">Confidence</span>
-      <span id="confidence-display" class="confidence-val mono">—</span>
-    </div>
-  </section>
-
-  <!-- ── Oracle Panel ── -->
-  <section class="panel panel-oracle">
-    <div class="panel-header">
-      <h2>Oracle <span class="subtitle">Swarm Simulation</span></h2>
-    </div>
-
-    <!-- Simulation config -->
-    <div class="sim-config">
-      <div class="config-row">
-        <label class="mono">Scenario</label>
-        <select id="scenario-select" class="select">
-          <option value="concert_general_admission">Concert · GA</option>
-          <option value="festival_multi_stage">Festival · Multi-Stage</option>
-          <option value="stadium_sports">Stadium · Sports</option>
-        </select>
-      </div>
-      <div class="config-row">
-        <label class="mono">Incident</label>
-        <select id="incident-select" class="select">
-          <option value="crowd_surge">Crowd Surge</option>
-          <option value="evacuation">Evacuation</option>
-          <option value="medical">Medical Emergency</option>
-          <option value="fire">Fire</option>
-        </select>
-      </div>
-      <div class="config-row">
-        <label class="mono">Agents</label>
-        <input type="range" id="agent-count" min="1000" max="10000" step="1000" value="10000" />
-        <span id="agent-count-display" class="mono" style="font-size:12px;white-space:nowrap">10,000</span>
-      </div>
-      <div class="config-row">
-        <label class="mono">Claude</label>
-        <input type="checkbox" id="use-claude" checked />
-        <span class="mono" style="font-size:11px;color:var(--muted)">Reasoning on</span>
-      </div>
-    </div>
-
-    <button class="btn btn-simulate" id="run-sim-btn">▶ Run Simulation</button>
-
-    <!-- Results -->
-    <div class="sim-results hidden" id="sim-results">
-      <div class="result-grid">
-        <div class="result-card">
-          <div class="result-val" id="evac-time">—</div>
-          <div class="result-lbl mono">Evacuation Time</div>
-        </div>
-        <div class="result-card">
-          <div class="result-val" id="peak-density">—</div>
-          <div class="result-lbl mono">Peak Density / m²</div>
-        </div>
-        <div class="result-card">
-          <div class="result-val" id="injury-risk">—</div>
-          <div class="result-lbl mono">Injury Risk</div>
-        </div>
-        <div class="result-card">
-          <div class="result-val" id="evacuated-count">—</div>
-          <div class="result-lbl mono">Safely Evacuated</div>
+    <!-- ── Iris View ────────────────────────────────────── -->
+    <section id="view-iris" class="view active">
+      <div class="view-header">
+        <h1>Iris <span class="view-subtitle">Real-Time Monitoring</span></h1>
+        <div class="view-actions">
+          <select id="event-select" class="select-input">
+            <option value="astroworld_2024">Astroworld 2024</option>
+            <option value="coachella_2023" selected>Coachella 2023</option>
+            <option value="super_bowl_58">Super Bowl LVIII</option>
+          </select>
+          <button class="btn-secondary" id="refresh-signals-btn">Refresh</button>
         </div>
       </div>
 
-      <canvas id="sentiment-chart" height="100"></canvas>
-
-      <div class="recs-section">
-        <h3 class="mono">Claude Recommendations</h3>
-        <ul id="recs-list" class="recs-list"></ul>
+      <!-- KPI Row -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="score-card" id="kpi-safety">
+          <div class="score-value">--</div>
+          <div class="score-label">Safety</div>
+        </div>
+        <div class="score-card" id="kpi-revenue">
+          <div class="score-value">--</div>
+          <div class="score-label">Revenue</div>
+        </div>
+        <div class="score-card" id="kpi-experience">
+          <div class="score-value">--</div>
+          <div class="score-label">Experience</div>
+        </div>
+        <div class="score-card" id="kpi-bottleneck">
+          <div class="score-value">--</div>
+          <div class="score-label">Bottleneck</div>
+        </div>
       </div>
-      <div class="bottleneck-section">
-        <h3 class="mono">Bottleneck Locations</h3>
-        <ul id="bottleneck-list" class="bottleneck-list"></ul>
+
+      <!-- Signal bars -->
+      <div class="card" id="signal-panel">
+        <h3>Live Signals</h3>
+        <div id="signal-list">
+          <div class="signal-row" id="sig-twitter">
+            <span class="signal-name">Twitter Sentiment</span>
+            <div class="signal-bar"><div class="signal-bar-fill" style="width:0%"></div></div>
+            <span class="signal-value">--</span>
+          </div>
+          <div class="signal-row" id="sig-weather">
+            <span class="signal-name">Weather Risk</span>
+            <div class="signal-bar"><div class="signal-bar-fill" style="width:0%"></div></div>
+            <span class="signal-value">--</span>
+          </div>
+          <div class="signal-row" id="sig-density">
+            <span class="signal-name">Crowd Density</span>
+            <div class="signal-bar"><div class="signal-bar-fill" style="width:0%"></div></div>
+            <span class="signal-value">--</span>
+          </div>
+          <div class="signal-row" id="sig-ticket">
+            <span class="signal-name">Ticket Velocity</span>
+            <div class="signal-bar"><div class="signal-bar-fill" style="width:0%"></div></div>
+            <span class="signal-value">--</span>
+          </div>
+        </div>
+        <div id="claude-alert-box" class="alert alert-info" style="display:none;margin-top:16px;"></div>
       </div>
-    </div>
+    </section>
 
-    <button class="btn btn-secondary" id="suggest-btn" style="margin-top:8px">
-      Suggest Scenarios via Claude
-    </button>
-    <div class="claude-output hidden" id="scenario-suggestions"></div>
-  </section>
+    <!-- ── Oracle View ─────────────────────────────────── -->
+    <section id="view-oracle" class="view">
+      <div class="view-header">
+        <h1>Oracle <span class="view-subtitle">Swarm Simulation</span></h1>
+      </div>
 
-  <!-- ── Stats bar ── -->
-  <section class="stats-bar">
-    <div class="stat">
-      <span class="stat-val" id="stat-agents">10,000</span>
-      <span class="stat-lbl mono">Agents</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val" id="stat-accuracy">92%</span>
-      <span class="stat-lbl mono">Backtest Accuracy</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val" id="stat-events">3</span>
-      <span class="stat-lbl mono">Events Validated</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val" id="stat-model">Opus 4.7</span>
-      <span class="stat-lbl mono">AI Model</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val" style="font-size:18px;letter-spacing:-.01em">See. Predict. Act.</span>
-      <span class="stat-lbl mono">Tagline</span>
-    </div>
-  </section>
+      <!-- Scenario config -->
+      <div class="card" id="scenario-panel">
+        <h3>Configure Scenario</h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Event</label>
+            <select id="sim-event-select" class="select-input">
+              <option value="astroworld_2024">Astroworld 2024</option>
+              <option value="coachella_2023" selected>Coachella 2023</option>
+              <option value="super_bowl_58">Super Bowl LVIII</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Incident Type</label>
+            <select id="incident-type" class="select-input">
+              <option value="crowd_surge">Crowd Surge</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="evacuation">Evacuation</option>
+              <option value="fire">Fire</option>
+              <option value="weather">Severe Weather</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Severity</label>
+            <select id="severity" class="select-input">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Trigger (minutes into event)</label>
+            <input type="number" id="trigger-time" class="text-input" value="30" min="0" max="120">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="run-sim-btn">Run Simulation</button>
+          <button class="btn-secondary" id="suggest-scenarios-btn">Suggest Scenarios</button>
+        </div>
+      </div>
 
-</main>
+      <!-- Results -->
+      <div class="card" id="sim-results" style="display:none;">
+        <h3>Simulation Results</h3>
+        <div class="stats-bar" id="sim-stats">
+          <div class="stat"><span class="stat-value" id="res-evac">--</span><span class="stat-label">Evac (sec)</span></div>
+          <div class="stat"><span class="stat-value" id="res-density">--</span><span class="stat-label">Peak Density</span></div>
+          <div class="stat"><span class="stat-value" id="res-at-risk">--</span><span class="stat-label">At Risk</span></div>
+          <div class="stat"><span class="stat-value" id="res-injured">--</span><span class="stat-label">Injured</span></div>
+        </div>
+        <div id="bottleneck-list" style="margin-top:16px;"></div>
+        <div id="recommendations-list" style="margin-top:20px;"></div>
+      </div>
+    </section>
 
-<!-- ── Loading overlay ── -->
-<div class="loading-overlay hidden" id="loading-overlay">
-  <div class="spinner"></div>
-  <div id="loading-text" class="mono">Running simulation…</div>
-</div>
+    <!-- ── About View ──────────────────────────────────── -->
+    <section id="view-about" class="view">
+      <div class="view-header">
+        <h1>About <span class="view-subtitle">Eye of Horus: Sparks</span></h1>
+      </div>
+      <div class="card">
+        <p>AI-powered crowd intelligence for live events. Built at the <strong>Cerebral Valley Hackathon</strong>, April 21–26 2025.</p>
+        <p>Three modules: <strong>Iris</strong> (real-time monitoring) · <strong>Oracle</strong> (swarm simulation) · <strong>Claude Opus 4.7</strong> (reasoning layer).</p>
+        <p>Backtested against 3 real events with <strong>92.7% accuracy</strong>.</p>
+        <div class="backtest-table" id="backtest-table">Loading backtest data…</div>
+      </div>
+    </section>
 
-<script src="js/logo.js"></script>
-<script src="js/api.js"></script>
-<script src="js/iris_dashboard.js"></script>
-<script src="js/oracle_simulator.js"></script>
-<script src="js/app.js"></script>
+  </main>
+
+  <!-- Scripts — load order matters -->
+  <script src="js/logo.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/iris_dashboard.js"></script>
+  <script src="js/oracle_simulator.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,80 +1,58 @@
 /**
  * api.js — HTTP client for Eye of Horus: Sparks backend
- *
- * Change API_BASE_URL to your Vercel deployment URL in production.
  */
 
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:8000'
-  : '';  // same origin on Vercel
+  : '';
 
-const API = {
+const EohAPI = {
+  async _fetch(path, opts = {}) {
+    try {
+      const res = await fetch(API_BASE + path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error('[EohAPI]', path, err);
+      return null;
+    }
+  },
+
   /** GET /api/health */
-  async health() {
-    return _get('/api/health');
+  getHealthCheck() {
+    return this._fetch('/api/health');
   },
 
-  /** GET /api/iris/status?event_id=... */
-  async irisStatus(eventId = 'demo_event') {
-    return _get(`/api/iris/status?event_id=${encodeURIComponent(eventId)}`);
-  },
-
-  /** POST /api/iris/interpret */
-  async irisInterpret(eventId = 'demo_event') {
-    return _post('/api/iris/interpret', { event_id: eventId });
-  },
-
-  /** GET /api/oracle/scenarios */
-  async oracleScenarios() {
-    return _get('/api/oracle/scenarios');
+  /** GET /api/iris/live-signals?event_id=... */
+  getLiveSignals(eventId = 'coachella_2023') {
+    return this._fetch(`/api/iris/live-signals?event_id=${eventId}`);
   },
 
   /** POST /api/oracle/simulate */
-  async oracleSimulate(payload) {
-    return _post('/api/oracle/simulate', payload);
-  },
-
-  /** POST /api/oracle/suggest-scenarios */
-  async oracleSuggestScenarios(eventConfig) {
-    return _post('/api/oracle/suggest-scenarios', { event_config: eventConfig });
+  runSimulation(eventId, scenario) {
+    return this._fetch('/api/oracle/simulate', {
+      method: 'POST',
+      body: JSON.stringify({ event_id: eventId, scenario, num_agents: 10000, include_claude: true }),
+    });
   },
 
   /** GET /api/sparks/events */
-  async sparksEvents() {
-    return _get('/api/sparks/events');
+  getEvents() {
+    return this._fetch('/api/sparks/events');
   },
 
-  /** GET /api/sparks/events/:id/risk-profile */
-  async sparksRiskProfile(eventId) {
-    return _get(`/api/sparks/events/${encodeURIComponent(eventId)}/risk-profile`);
+  /** GET /api/sparks/events/:id */
+  getEventProfile(eventId) {
+    return this._fetch(`/api/sparks/events/${eventId}`);
   },
 
-  /** POST /api/backtest/run */
-  async backtestRun(eventIds, simulationConfig = {}) {
-    return _post('/api/backtest/run', { event_ids: eventIds, simulation_config: simulationConfig });
+  /** GET /api/sparks/backtest */
+  getBacktestResults() {
+    return this._fetch('/api/sparks/backtest');
   },
 };
 
-// ── Internal helpers ──────────────────────────────────────────
-
-async function _get(path) {
-  const res = await fetch(API_BASE_URL + path);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-async function _post(path, body) {
-  const res = await fetch(API_BASE_URL + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+window.EohAPI = EohAPI;

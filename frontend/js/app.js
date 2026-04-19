@@ -2,44 +2,81 @@
  * app.js — Main application entry point
  */
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize header animated logo (hover-to-reveal "Horus")
-  const headerLogoEl = document.getElementById('header-logo');
-  if (headerLogoEl && window.WedjatLogo) {
-    const headerLogo = new WedjatLogo(headerLogoEl, 'hover');
-    headerLogo.init('wedjat');
+document.addEventListener('DOMContentLoaded', () => {
+  // ── Logo ───────────────────────────────────────────
+  const logoEl = document.getElementById('header-logo');
+  if (logoEl && window.WedjatLogo) {
+    const logo = new WedjatLogo(logoEl, 'hover');
+    logo.init('wedjat');
   }
 
-  // Verify backend connectivity
-  try {
-    await API.health();
-    console.log('Backend connected ✓');
-  } catch (e) {
-    console.warn('Backend not reachable — running in demo mode:', e.message);
-  }
-
-  // Load events and set active event name in header
-  const activeEventId = await _loadActiveEvent();
-
-  // Initialize panels
-  IrisDashboard.init(activeEventId);
-  OracleSimulator.init();
-});
-
-async function _loadActiveEvent() {
-  try {
-    const data = await API.sparksEvents();
-    const events = data.events ?? [];
-    const active = events.find(e => e.status === 'active') ?? events[0];
-
-    if (active) {
-      document.getElementById('active-event-name').textContent = active.name;
-      return active.id;
+  // ── Health check ───────────────────────────────────
+  (async () => {
+    const dot   = document.getElementById('api-status-dot');
+    const label = document.getElementById('api-status-label');
+    const data  = await EohAPI.getHealthCheck();
+    if (data?.status === 'ok') {
+      if (dot)   { dot.classList.add('online'); }
+      if (label) { label.textContent = 'API Online'; }
+    } else {
+      if (dot)   { dot.classList.add('offline'); }
+      if (label) { label.textContent = 'API Offline'; }
     }
-  } catch (e) {
-    console.warn('Could not load events:', e.message);
-  }
+  })();
 
-  document.getElementById('active-event-name').textContent = 'Demo Event';
-  return 'demo_event';
-}
+  // ── Navigation ─────────────────────────────────────
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const views   = document.querySelectorAll('.view');
+
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.view;
+      navBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      views.forEach(v => v.classList.toggle('active', v.id === `view-${target}`));
+      if (target === 'about') loadBacktest();
+    });
+  });
+
+  // ── Module init ────────────────────────────────────
+  const iris = new IrisDashboard();
+  iris.init();
+
+  const oracle = new OracleSimulator();
+  oracle.init();
+
+  // ── Backtest table (About view) ────────────────────
+  async function loadBacktest() {
+    const el = document.getElementById('backtest-table');
+    if (!el || el.dataset.loaded) return;
+    const data = await EohAPI.getBacktestResults();
+    if (!data) {
+      el.textContent = 'Backtest data unavailable.';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Event</th><th>Risk Level Correct</th>
+          <th>Evac Error</th><th>Accuracy</th>
+        </tr></thead>
+        <tbody>
+          ${data.events.map(e => `
+            <tr>
+              <td>${e.event_id.replace(/_/g,' ')}</td>
+              <td>${e.risk_level_correct ? '✓' : '✗'}</td>
+              <td>${e.evacuation_time_error_pct}%</td>
+              <td class="acc">${(e.accuracy * 100).toFixed(1)}%</td>
+            </tr>
+          `).join('')}
+          <tr style="border-top:2px solid var(--border-color)">
+            <td><strong>Overall</strong></td>
+            <td></td><td></td>
+            <td class="acc"><strong>${(data.overall_accuracy * 100).toFixed(1)}%</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    el.dataset.loaded = '1';
+  }
+});
