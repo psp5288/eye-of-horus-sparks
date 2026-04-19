@@ -1,167 +1,118 @@
 """FastAPI entry point for Eye of Horus: Sparks."""
 
-from fastapi import FastAPI
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
 
 from config import get_settings
-from iris.monitor import IrisMonitor
-from oracle.swarm import SwarmSimulation
-from oracle.scenarios import get_built_in_scenarios
-from oracle.claude_integration import ClaudeIntegration
-from sparks.venues import list_events
-from iris.models import IrisStatusResponse, SignalFeedResponse
-from oracle.scenarios import SimulateRequest
-from sparks.entertainment import EntertainmentScorer
 
 settings = get_settings()
 
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
+    title="Eye of Horus: Sparks",
     description="AI-powered crowd intelligence for live events",
+    version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Serve frontend static files
-_frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-if os.path.exists(_frontend_path):
-    app.mount("/static", StaticFiles(directory=_frontend_path), name="static")
 
-
-# ──────────────────────────────────────────────────────────────
-# Health
-# ──────────────────────────────────────────────────────────────
+# ── Health check ──────────────────────────────────────────────────────────
 
 @app.get("/api/health")
 async def health_check():
-    """Service health check."""
     return {
-        "status": "healthy",
+        "status": "ok",
         "app": settings.app_name,
-        "version": settings.app_version,
-        "modules": {
-            "iris": "operational",
-            "oracle": "operational",
-            "sparks": "operational",
-        },
+        "version": "1.0.0",
+        "vertical": settings.vertical,
+        "claude_configured": bool(settings.claude_api_key),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
-# ──────────────────────────────────────────────────────────────
-# Iris — Real-Time Monitoring
-# ──────────────────────────────────────────────────────────────
+# ── Iris routes ───────────────────────────────────────────────────────────
 
-@app.get("/api/iris/status")
-async def iris_status(event_id: str = "demo_event"):
-    """Return current composite risk score and signal breakdown."""
-    monitor = IrisMonitor(event_id=event_id)
-    status = await monitor.get_status()
-    return status
+@app.get("/api/iris/live-signals")
+async def get_live_signals(event_id: str = "coachella_2023"):
+    from iris.monitor import IrisMonitor
+    monitor = IrisMonitor()
+    signals = await monitor.fetch_signals(event_id)
+    return signals
 
 
-@app.get("/api/iris/signals")
-async def iris_signals(event_id: str = "demo_event", minutes: int = 60):
-    """Return raw signal feed for the last N minutes."""
-    monitor = IrisMonitor(event_id=event_id)
-    feed = await monitor.get_signal_feed(window_minutes=minutes)
-    return feed
-
-
-@app.post("/api/iris/interpret")
-async def iris_interpret(body: dict):
-    """Ask Claude to interpret current signals and produce a natural language alert."""
-    event_id = body.get("event_id", "demo_event")
-    monitor = IrisMonitor(event_id=event_id)
-    status = await monitor.get_status()
-    claude = ClaudeIntegration()
-    result = await claude.interpret_signals(status.signals, status.risk_score)
-    return result
-
-
-# ──────────────────────────────────────────────────────────────
-# Oracle — Swarm Simulation
-# ──────────────────────────────────────────────────────────────
-
-@app.get("/api/oracle/scenarios")
-async def oracle_scenarios():
-    """Return list of available simulation scenarios."""
-    return {"built_in": get_built_in_scenarios(), "saved": []}
-
+# ── Oracle routes ─────────────────────────────────────────────────────────
 
 @app.post("/api/oracle/simulate")
-async def oracle_simulate(request: SimulateRequest):
-    """Run a swarm simulation for a given scenario and event config."""
-    simulation = SwarmSimulation(request=request, settings=settings)
-    result = await simulation.run()
-    return result
+async def run_simulation(body: dict):
+    from oracle.swarm import SwarmSimulation
+    from oracle.scenarios import parse_scenario_input
 
+    event_id = body.get("event_id", "coachella_2023")
+    scenario_data = body.get("scenario", {})
+    num_agents = body.get("num_agents", 10000)
+    include_claude = body.get("include_claude", True)
 
-@app.post("/api/oracle/suggest-scenarios")
-async def oracle_suggest_scenarios(body: dict):
-    """Ask Claude to generate what-if scenarios for an event."""
-    claude = ClaudeIntegration()
-    scenarios = await claude.generate_scenarios(event_config=body.get("event_config", {}))
-    return {"scenarios": scenarios}
-
-
-# ──────────────────────────────────────────────────────────────
-# Sparks — Entertainment Events
-# ──────────────────────────────────────────────────────────────
-
-@app.get("/api/sparks/events")
-async def sparks_events():
-    """Return list of configured events."""
-    return {"events": list_events()}
-
-
-@app.get("/api/sparks/events/{event_id}/risk-profile")
-async def sparks_risk_profile(event_id: str):
-    """Return entertainment-specific risk profile for an event."""
-    scorer = EntertainmentScorer(event_id=event_id)
-    return await scorer.get_risk_profile()
-
-
-# ──────────────────────────────────────────────────────────────
-# Backtesting
-# ──────────────────────────────────────────────────────────────
-
-@app.post("/api/backtest/run")
-async def backtest_run(body: dict):
-    """Run backtesting against historical event data."""
-    from oracle.scenarios import run_backtest
-    results = await run_backtest(
-        event_ids=body.get("event_ids", []),
-        simulation_config=body.get("simulation_config", {}),
-    )
+    scenario = parse_scenario_input(scenario_data)
+    sim = SwarmSimulation(num_agents=num_agents, event_id=event_id)
+    results = await sim.run_simulation(scenario, use_claude=include_claude)
     return results
 
 
-# ──────────────────────────────────────────────────────────────
-# Frontend catchall
-# ──────────────────────────────────────────────────────────────
+# ── Sparks routes ─────────────────────────────────────────────────────────
 
-@app.get("/")
-async def serve_frontend():
-    """Serve the frontend dashboard."""
-    index_path = os.path.join(_frontend_path, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "Eye of Horus: Sparks API", "docs": "/docs"}
+@app.get("/api/sparks/events")
+async def list_events():
+    from sparks.venues import list_all_events
+    return list_all_events()
 
 
-# Vercel / Mangum adapter
+@app.get("/api/sparks/events/{event_id}")
+async def get_event_risk_profile(event_id: str):
+    from sparks.entertainment import EntertainmentScorer
+    scorer = EntertainmentScorer(event_id)
+    profile = await scorer.get_risk_profile()
+    if "error" in profile:
+        raise HTTPException(status_code=404, detail=profile["error"])
+    return profile
+
+
+@app.get("/api/sparks/backtest")
+async def get_backtest_results():
+    import json
+    from pathlib import Path
+    data_file = Path(__file__).resolve().parents[1] / "data" / "backtest_events_complete.json"
+    if not data_file.exists():
+        raise HTTPException(status_code=404, detail="Backtest data not found")
+    with open(data_file) as f:
+        data = json.load(f)
+    return {
+        "overall_accuracy": data["metadata"]["accuracy_summary"]["overall_accuracy"],
+        "target": data["metadata"]["accuracy_summary"]["accuracy_target"],
+        "target_met": data["metadata"]["accuracy_summary"]["target_met"],
+        "events": [
+            {
+                "event_id": e["event_id"],
+                "risk_level_correct": data["metadata"]["accuracy_summary"][e["event_id"]]["risk_level_correct"],
+                "evacuation_time_error_pct": data["metadata"]["accuracy_summary"][e["event_id"]]["evacuation_time_error_pct"],
+                "accuracy": data["metadata"]["accuracy_summary"][e["event_id"]]["accuracy"],
+            }
+            for e in data["events"]
+        ],
+    }
+
+
+# ── Vercel / Mangum adapter ───────────────────────────────────────────────
+
 try:
     from mangum import Mangum
     handler = Mangum(app)

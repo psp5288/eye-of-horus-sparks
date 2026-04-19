@@ -1,48 +1,42 @@
 """Application configuration loaded from environment variables."""
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # App
     app_name: str = "Eye of Horus: Sparks"
-    app_version: str = "1.0.0"
-    app_env: str = "development"
-    debug: bool = True
-    secret_key: str = "change-in-production"
     vertical: str = "sparks"
+    debug: bool = False
+    environment: str = "development"
 
-    # Claude
-    claude_api_key: str = ""
-    claude_model: str = "claude-opus-4-7-20250514"
+    # Claude / Anthropic
+    claude_api_key: Optional[str] = None
+    claude_model: str = "claude-opus-4-7"
 
-    # External APIs
-    twitter_bearer_token: str = ""
-    twitter_api_key: str = ""
-    twitter_api_secret: str = ""
-    openweather_api_key: str = ""
-    ticketmaster_key: str = ""
+    # Twitter / X
+    twitter_api_key: Optional[str] = None
+    twitter_api_secret: Optional[str] = None
+    twitter_bearer_token: Optional[str] = None
+    twitter_access_token: Optional[str] = None
+    twitter_access_token_secret: Optional[str] = None
 
-    # CORS
-    allowed_origins: str = "http://localhost:3000,http://localhost:8000"
+    # Weather
+    weather_api_key: Optional[str] = None
 
-    # Simulation defaults
-    default_agent_count: int = 10000
-    max_simulation_seconds: int = 600
-    claude_sample_agents_per_tick: int = 10
+    # Ticketmaster
+    ticketmaster_api_key: Optional[str] = None
 
-    # Database (optional)
+    # Database
     database_url: str = "sqlite:///./eye_of_horus.db"
-    redis_url: str = ""
+    redis_url: str = "redis://localhost:6379"
 
-    @property
-    def allowed_origins_list(self) -> list[str]:
-        return [origin.strip() for origin in self.allowed_origins.split(",")]
-
-    @property
-    def is_production(self) -> bool:
-        return self.app_env == "production"
+    # Hackathon
+    hackathon_start: str = "2025-04-21"
+    hackathon_end: str = "2025-04-26"
 
     class Config:
         env_file = ".env"
@@ -52,5 +46,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Return cached settings instance."""
     return Settings()
