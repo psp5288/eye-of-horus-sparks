@@ -100,7 +100,35 @@ class OracleSimulator {
   }
 
   async suggestScenarios() {
-    alert('Scenario suggestions require Claude API key — implement on April 21.');
+    const btn = document.getElementById('suggest-scenarios-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Thinking…'; }
+
+    const eventId = document.getElementById('sim-event-select')?.value || 'coachella_2023';
+    const data = await EohAPI.suggestScenarios(eventId);
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Suggest Scenarios'; }
+
+    if (!data?.scenarios) {
+      const el = document.getElementById('recommendations-list');
+      if (el) el.innerHTML = '<p style="color:var(--sev-watch);font-size:13px;">Could not load suggestions — is the backend running?</p>';
+      return;
+    }
+
+    const el = document.getElementById('recommendations-list');
+    if (!el) return;
+    const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [data.scenarios];
+    el.innerHTML = '<h3 style="margin-bottom:8px;">Suggested Scenarios</h3>' +
+      scenarios.map((s, i) => `
+        <div class="rec-item" style="cursor:pointer;" onclick="document.getElementById('incident-type').value='${s.incident_type || 'crowd_surge'}';document.getElementById('severity').value='${s.severity || 'medium'}';">
+          <span class="rec-priority">#${i + 1}</span>
+          <div class="rec-body">
+            <div class="rec-action">${s.description || s.incident_type || 'Scenario ' + (i+1)}</div>
+            <div class="rec-meta">${s.rationale || ''}</div>
+          </div>
+        </div>
+      `).join('');
+    const panel = document.getElementById('sim-results');
+    if (panel) panel.style.display = 'block';
   }
 
   _setText(id, value) {

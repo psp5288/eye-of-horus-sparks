@@ -52,6 +52,18 @@ async def get_live_signals(event_id: str = "coachella_2023"):
 
 # ── Oracle routes ─────────────────────────────────────────────────────────
 
+@app.get("/api/oracle/suggest")
+async def suggest_scenarios(event_id: str = "coachella_2023"):
+    from oracle.claude_integration import generate_scenarios
+    from sparks.venues import get_event
+    event = get_event(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    current_state = {"event_id": event_id, "phase": "pre_event"}
+    suggestions = await generate_scenarios(event.dict(), current_state)
+    return {"event_id": event_id, "scenarios": suggestions}
+
+
 @app.post("/api/oracle/simulate")
 async def run_simulation(body: dict):
     from oracle.swarm import SwarmSimulation

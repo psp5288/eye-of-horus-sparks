@@ -41,6 +41,12 @@ class IrisDashboard {
     this._updateSignalBars(data);
     this._updateSeverityChips(data.risk_level);
     this._updateAlert(data.claude_interpretation);
+    this._updateTimestamp();
+  }
+
+  _updateTimestamp() {
+    const el = document.getElementById('iris-last-updated');
+    if (el) el.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
   }
 
   _updateKPIs(data) {

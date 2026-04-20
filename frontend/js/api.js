@@ -49,6 +49,11 @@ const EohAPI = {
     return this._fetch(`/api/sparks/events/${eventId}`);
   },
 
+  /** GET /api/oracle/suggest?event_id=... */
+  suggestScenarios(eventId = 'coachella_2023') {
+    return this._fetch(`/api/oracle/suggest?event_id=${eventId}`);
+  },
+
   /** GET /api/sparks/backtest */
   getBacktestResults() {
     return this._fetch('/api/sparks/backtest');
